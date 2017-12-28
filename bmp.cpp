@@ -1,15 +1,17 @@
 #include <Arduino.h>
 #include "bmp.h"
 
-// #include "bmp/av1.h"
-// #include "bmp/hair2.h"
-// #include "bmp/soldiers1.h"
-// #include "bmp/boss.h"
-// #include "bmp/base1.h"
-// #include "bmp/bg1.h"
+// #include "states.h"
+// #include "global.h"
 
 /*
 
+#include "bmp/av1.h"
+#include "bmp/hair2.h"
+#include "bmp/soldiers1.h"
+#include "bmp/boss.h"
+#include "bmp/base1.h"
+#include "bmp/bg1.h"
 
 #include "bmp/walk1.h"
 #include "bmp/walk8.h"
