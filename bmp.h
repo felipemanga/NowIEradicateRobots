@@ -1,0 +1,14 @@
+extern const unsigned char PROGMEM walk7[], walk7_mask[], walk7_plus_mask[], walk7_comp_w[], walk7_comp_b[];
+extern const unsigned char PROGMEM walk6[], walk6_mask[], walk6_plus_mask[], walk6_comp_w[], walk6_comp_b[];
+extern const unsigned char PROGMEM walk5[], walk5_mask[], walk5_plus_mask[], walk5_comp_w[], walk5_comp_b[];
+extern const unsigned char PROGMEM walk4[], walk4_mask[], walk4_plus_mask[], walk4_comp_w[], walk4_comp_b[];
+extern const unsigned char PROGMEM walk3[], walk3_mask[], walk3_plus_mask[], walk3_comp_w[], walk3_comp_b[];
+extern const unsigned char PROGMEM walk2[], walk2_mask[], walk2_plus_mask[], walk2_comp_w[], walk2_comp_b[];
+extern const unsigned char PROGMEM walk8[], walk8_mask[], walk8_plus_mask[], walk8_comp_w[], walk8_comp_b[];
+extern const unsigned char PROGMEM walk1[], walk1_mask[], walk1_plus_mask[], walk1_comp_w[], walk1_comp_b[];
+extern const unsigned char PROGMEM bg1[], bg1_mask[], bg1_plus_mask[], bg1_comp[];
+extern const unsigned char PROGMEM base1[], base1_mask[], base1_plus_mask[], base1_comp[];
+extern const unsigned char PROGMEM boss[], boss_mask[], boss_plus_mask[], boss_comp[];
+extern const unsigned char PROGMEM soldiers1[], soldiers1_mask[], soldiers1_plus_mask[], soldiers1_comp[];
+extern const unsigned char PROGMEM hair2[], hair2_mask[], hair2_plus_mask[];
+extern const unsigned char PROGMEM av1[], av1_mask[], av1_plus_mask[];
