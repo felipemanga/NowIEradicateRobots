@@ -4,13 +4,9 @@
 
 #include "states.h"
 
-class _ : public Arduboy2 {
-  size_t write(uint8_t c){ return 0; }
-} arduboy;
-
 void setup() {
   arduboy.boot();
-  arduboy.setFrameRate(8);
+  arduboy.setFrameRate(60);
   state = State::Init;
   prevState = State::MAX;
 }
@@ -33,6 +29,8 @@ void loop() {
   func = (StateRef) pgm_read_word( stateUpdate + uint8_t(state) );
   if( func ) (*func)();
 
+  flushDrawQueue();
+  
   arduboy.display();
 
 }

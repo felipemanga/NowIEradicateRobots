@@ -10,14 +10,17 @@
 typedef void (*StateRef)();
 
 #define STATE( NAME, VARS, INIT, UPDATE )	\
-  void init ## NAME ();				\
-  void update ## NAME ();
+  namespace ns ## NAME { \
+    void init();	\
+    void update();  \
+    struct Type_ ## NAME VARS;   \
+  }
 #include "states.h"
 
 static union {
-  #define STATE( NAME, VAR, INIT, UPDATE ) struct VAR NAME;
+  #define STATE( NAME, VAR, INIT, UPDATE ) ns ## NAME :: Type_ ## NAME NAME;
   #include "states.h"  
-};
+} stateData;
 
 enum class State {
   #define STATE( NAME, VAR, INIT, UPDATE ) NAME,
@@ -26,20 +29,23 @@ enum class State {
 } state, prevState;
 
 const StateRef stateUpdate[] PROGMEM = {
-#define STATE( NAME, VAR, INIT, UPDATE ) update ## NAME,
+#define STATE( NAME, VAR, INIT, UPDATE ) ns ## NAME :: update,
   #include "states.h"
   NULL
 };
 
 const StateRef stateInit[] PROGMEM = {
-#define STATE( NAME, VAR, INIT, UPDATE ) init ## NAME,
+#define STATE( NAME, VAR, INIT, UPDATE ) ns ## NAME :: init,
 #include "states.h"
   NULL
 };
 
 #define STATE( NAME, VAR, INIT, UPDATE )	\
-  void init ## NAME () INIT			\
-  void update ## NAME () UPDATE
+namespace ns ## NAME {  \
+  Type_ ## NAME & scope = ::stateData.NAME;    \
+  void init() INIT			\
+  void update() UPDATE  \
+}
 #include "states.h"
 
 #endif
