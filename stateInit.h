@@ -1,18 +1,55 @@
 STATE( Init,
   {
     Actor girl;
+	uint8_t steps;
+	
+	Actor fu;
+
   },
   {
+	  clearScreen = CLEAR_WHITE;
+	  scope.steps = 0;
+	  
+	  scope.fu
+		  .init()
+		  .setPosition( 64, 128+16 )
+		  .moveTo( 64, 32 )
+		  .setTweenWeight( 4 )
+		  .setAnimation( &flightUnitFly )
+		  .onTweenComplete([]{
+				  scope.fu
+					  .onTweenComplete([]{
+							  state = State::Level1;
+						  })
+					  .moveTo( 64, -32 )
+					  .setTweenWeight( 2 );
+			  })
+		  .flags = ANIM_PLAY
+		  ;
+	  	  		  
 	  scope.girl
-		  .moveTo( 20, 16 )
+		  .init()
+		  .setPosition( -20, 16 )
 		  .setAnimation( &girlWalk )
 		  .show()
-		  .flags = ANIM_PLAY;
+		  .onAnimationComplete([]{
+				  scope.steps++;
+				  if( scope.steps >= 5 )
+					  start();
+			  })
+		  .flags = ANIM_PLAY | ANIM_GRAY;
+	  
   },
   {
-	  for( uint8_t i=0; i<128/4; ++i )
-		  Sprites::drawOverwrite( i*4, 0, bg1, 0 );    
+	  
+	  if( justPressed(A_BUTTON) && scope.steps < 5 ){
+		  scope.steps = 5;
+		  start();
+	  }
     
-  }
-       
+  },
+	   void start(){		   
+		   scope.fu.show();
+		   scope.girl.hide();		   
+	   }	  
 )

@@ -6,7 +6,7 @@ Arduboy2Base arduboy;
 
 void setup() {
   arduboy.boot();
-  arduboy.setFrameRate(6);
+  arduboy.setFrameRate(20);
 }
 
 void loop() {

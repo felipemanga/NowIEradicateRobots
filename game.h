@@ -2,12 +2,17 @@ typedef void (*StateRef)();
 
 uint8_t previousButtonState, currentButtonState, _justPressed;
 #define justPressed( x ) (_justPressed&(x))
+#define isPressed( x ) (currentButtonState&(x))
 void pollButtons(){
     previousButtonState = currentButtonState;
     currentButtonState = arduboy.buttonsState();
     _justPressed = (previousButtonState^currentButtonState)&currentButtonState;
 }
 
+uint8_t clearScreen;
+#define CLEAR_WHITE 0x81
+#define CLEAR_BLACK 0x80
+#define CLEAR_GRAY  0x82
 
 typedef uint8_t *uint8_tp;
 typedef uint16_t *uint16_tp;
@@ -50,12 +55,15 @@ template <> void memcpy_Pn <8> ( void *out, const uint8_t *src ){
 template <typename T> void pgm_read_struct( T *header, const void *src ){
     memcpy_Pn<sizeof(T)>( header, (const uint8_t *) src );
 }
-#define ANIM_PLAY 1
+
+#define ANIM_GRAY 1
 #define ANIM_LOOP 2
 #define ANIM_OFFSET 4
 #define ANIM_OFFSET_FEEDBACK (4|8)
 #define ANIM_WHITE 16
 #define ANIM_BLACK 32
+#define ANIM_INVERT 64
+#define ANIM_PLAY 128
 
 struct AnimHeader {
     uint8_t flags;
@@ -63,7 +71,11 @@ struct AnimHeader {
     uint8_t frameTime;
 };
 struct AnimFrameW {
-	const uint8_t *white;
+    const uint8_t *white;
+};
+struct AnimFrameWXY {
+    const uint8_t *white;
+    int8_t x, y;
 };
 struct AnimFrameWB {
     const uint8_t *white, *black;
@@ -82,53 +94,94 @@ struct Actor {
     union{
         int16_t x;
         struct {
-            int8_t xH;
             uint8_t xL;
+            int8_t xH;
         };
     };
     union{
         int16_t y;
         struct {
-            int8_t yH;
             uint8_t yL;
+            int8_t yH;			
         };
     };
+    int8_t targetX, targetY, tweenWeight;
+    Actor *parent;
     uint8_t frame, currentFrameTime, flags;
     const void *animation;
+    void (*_onAnimationComplete)();
+    void (*_onTweenComplete)();
 
-	Actor &moveTo( uint8_t x, uint8_t y ){
-		xH = x;
-		xL = 0;
-		yH = y;
-		yL = 0;
-		return *this;
-	}
+    Actor &init(){
+	tweenWeight = 0;
+	_onAnimationComplete = NULL;
+	_onTweenComplete = NULL;
+	parent = NULL;
+	flags = 0;
+	return *this;
+    }
 
-	Actor &setAnimation( const void *_animation ){
-		frame = 0;
-		currentFrameTime = 0;
-		animation = _animation;
-		return *this;
-	}
+    Actor &onAnimationComplete( void (*cb)() ){
+	_onAnimationComplete = cb;
+	return *this;
+    }
 
-	Actor &show(){
-		drawQueue[ queueSize++ ] = this;
-		return *this;
-	}
+    Actor &onTweenComplete( void (*cb)() ){
+	_onTweenComplete = cb;
+	return *this;
+    }
 
-	Actor &hide(){
+    Actor &setParent( Actor &parent ){
+	this->parent = &parent;
+	return *this;
+    }
+
+    Actor &setPosition( uint8_t x, uint8_t y ){
+	xH = targetX = x;
+	xL = 0;
+	yH = targetY = y;
+	yL = 0;
+	tweenWeight = 0;
+	return *this;
+    }
+
+    Actor &moveTo( int8_t x, int8_t y ){
+	targetX = x;
+	targetY = y;
+	tweenWeight = 1;
+	return *this;
+    }
+
+    Actor &setTweenWeight( int8_t w ){
+	tweenWeight = w;
+	return *this;
+    }
+
+    Actor &setAnimation( const void *_animation ){
+	frame = 0;
+	currentFrameTime = 0;
+	animation = _animation;
+	return *this;
+    }
+
+    Actor &show(){
+	drawQueue[ queueSize++ ] = this;
+	return *this;
+    }
+
+    Actor &hide(){
 		
-		for( auto i=queueSize; i; --i ){
-			if( drawQueue[i-1] == this ){
-				for( ; i<queueSize; ++i )
-					drawQueue[i-1] = drawQueue[i];
-				queueSize--;
-				return *this;
-			}
-		}
-		
+	for( auto i=queueSize; i; --i ){
+	    if( drawQueue[i-1] == this ){
+		for( ; i<queueSize; ++i )
+		    drawQueue[i-1] = drawQueue[i];
+		queueSize--;
 		return *this;
+	    }
 	}
+		
+	return *this;
+    }
 };
 
 void flushDrawQueue(){
@@ -136,6 +189,22 @@ void flushDrawQueue(){
     for( uint8_t i=0; i<queueSize; ++i ){
 
         Actor &actor = *drawQueue[i];
+
+	if( actor.tweenWeight ){
+	    int16_t t;
+	    *(uint8_tp(&t)) = 0;
+	    *(uint8_tp(&t)+1) = actor.targetX;
+	    actor.x -= (actor.x - t) >> actor.tweenWeight;
+			
+	    *(uint8_tp(&t)+1) = actor.targetY;
+	    actor.y -= (actor.y - t) >> actor.tweenWeight;
+
+	    if( actor.xH == actor.targetX && actor.yH == actor.targetY ){
+		actor.tweenWeight = 0;
+		if( actor._onTweenComplete )
+		    (*actor._onTweenComplete)();
+	    }
+	}
     
         AnimHeader header;
 
@@ -154,33 +223,37 @@ void flushDrawQueue(){
         if( actor.frame >= header.frameCount ){
             if( flags & ANIM_LOOP ) actor.frame = 0;
             else actor.frame = header.frameCount - 1;
+	    if( actor._onAnimationComplete ){
+		(*actor._onAnimationComplete)();
+		flags = actor.flags | header.flags;
+	    }
         }
         
         AnimFrameWBXY frame;
-		uint8_t sizeofframe = 0;
-		if( flags & ANIM_WHITE )
-			sizeofframe += sizeof(void *);
-		if( flags & ANIM_BLACK )
-			sizeofframe += sizeof(void *);
-		if( flags & ANIM_OFFSET )
-			sizeofframe += 2;
+	uint8_t sizeofframe = 0;
+	if( flags & ANIM_WHITE )
+	    sizeofframe += sizeof(void *);
+	if( flags & ANIM_BLACK )
+	    sizeofframe += sizeof(void *);
+	if( flags & ANIM_OFFSET )
+	    sizeofframe += 2;
 
-		uint8_t *addr = ((uint8_t *)actor.animation) + sizeof(header) + actor.frame*sizeofframe;
+	uint8_t *addr = ((uint8_t *)actor.animation) + sizeof(header) + actor.frame*sizeofframe;
 
-		if( flags & ANIM_WHITE ){
-			frame.white = pgm_read_word( addr );
-			addr += sizeof(void *);
-		}else frame.white = NULL;
+	if( flags & ANIM_WHITE ){
+	    frame.white = pgm_read_word( addr );
+	    addr += sizeof(void *);
+	}else frame.white = NULL;
 		
-		if( flags & ANIM_BLACK ){
-			frame.black = pgm_read_word( addr );
-			addr += sizeof(void *);
-		}else frame.black = NULL;
+	if( flags & ANIM_BLACK ){
+	    frame.black = pgm_read_word( addr );
+	    addr += sizeof(void *);
+	}else frame.black = NULL;
 		
-		if( flags & ANIM_OFFSET ){
-			frame.x = pgm_read_word(addr++);
-			frame.y = pgm_read_word(addr);
-		}else frame.x = frame.y = 0;
+	if( flags & ANIM_OFFSET ){
+	    frame.x = pgm_read_word(addr++);
+	    frame.y = pgm_read_word(addr);
+	}else frame.x = frame.y = 0;
 
         int8_t x;
         int8_t y;
@@ -197,11 +270,20 @@ void flushDrawQueue(){
             y = actor.yH + frame.y;
         }
 
+	if( actor.parent ){
+	    x += actor.parent->xH;
+	    y += actor.parent->yH;
+	}
+
+	bool icolor = flags & ANIM_INVERT;
+	bool color = !icolor;
+	color ^= (flags & ANIM_GRAY) & (arduboy.frameCount&1);
+
         if( frame.white )
-            arduboy.drawCompressed( x, y, frame.white );
+            arduboy.drawCompressed( x, y, frame.white, color );
             
         if( frame.black )
-            arduboy.drawCompressed( x, y, frame.black, 0 );
+            arduboy.drawCompressed( x, y, frame.black, icolor );
         
     
     }
@@ -209,76 +291,121 @@ void flushDrawQueue(){
 }
 
 
-#define STATE( NAME, VARS, INIT, UPDATE )	\
-  namespace ns ## NAME { \
-    void init();	\
-    void update();  \
-    struct Type_ ## NAME VARS;   \
-  }
+#define STATE( NAME, VARS, INIT, UPDATE, ... )	\
+    namespace ns ## NAME {			\
+	void init();				\
+	void update();				\
+	struct Type_ ## NAME VARS;		\
+    }
 #include "states.h"
 #undef STATE
 
 enum class State {
-  #define STATE( NAME, VAR, INIT, UPDATE ) NAME,
-  #include "states.h"
-  MAX
-} state, prevState = State::MAX;
+#define STATE( NAME, VAR, INIT, UPDATE, ... ) NAME,
+#include "states.h"
+    MAX
+	} state, prevState = State::MAX;
 #undef STATE
 
 #include "global.h"
 
 static union {
-  #define STATE( NAME, VAR, INIT, UPDATE ) ns ## NAME :: Type_ ## NAME NAME;
-  #include "states.h"  
+#define STATE( NAME, VAR, INIT, UPDATE, ... ) ns ## NAME :: Type_ ## NAME NAME;
+#include "states.h"  
 } stateData;
 #undef STATE
 
 const StateRef stateUpdate[] PROGMEM = {
-#define STATE( NAME, VAR, INIT, UPDATE ) ns ## NAME :: update,
-  #include "states.h"
-  NULL
+#define STATE( NAME, VAR, INIT, UPDATE, ... ) ns ## NAME :: update,
+#include "states.h"
+    NULL
 };
 #undef STATE
 
 const StateRef stateInit[] PROGMEM = {
-#define STATE( NAME, VAR, INIT, UPDATE ) ns ## NAME :: init,
+#define STATE( NAME, VAR, INIT, UPDATE, ... ) ns ## NAME :: init,
 #include "states.h"
-  NULL
+    NULL
 };
 #undef STATE
 
-#define STATE( NAME, VAR, INIT, UPDATE )	\
-namespace ns ## NAME {  \
-  Type_ ## NAME & scope = ::stateData.NAME;    \
-  void init() INIT			\
-  void update() UPDATE  \
-}
+#define STATE( NAME, VAR, INIT, UPDATE, ... )		\
+    namespace ns ## NAME {				\
+	Type_ ## NAME & scope = ::stateData.NAME;	\
+	typedef Type_ ## NAME Scope;			\
+	__VA_ARGS__					\
+	    void init() INIT				\
+	    void update() UPDATE			\
+	    }
 #include "states.h"
 #undef STATE
 
 void tick(){
-  if (!(arduboy.nextFrame()))
-    return;
+    if (!(arduboy.nextFrame()))
+	return;
 
-  pollButtons();
+    if( clearScreen ){
+	uint8_t c = clearScreen&1;
+	if( clearScreen & 2 ){
+	    c = 0b10101010;
+	    if( arduboy.frameCount & 1 )
+		c = ~c;
+	    // local variable for screen buffer pointer,
+	    // which can be declared a read-write operand
+	    uint8_t* bPtr = arduboy.sBuffer;
 
-  StateRef func;
-  if( state != prevState ){
+	    asm volatile(
+		// if value is zero, skip assigning to 0xff
+		// "cpse %[color], __zero_reg__\n"
+		// "ldi %[color], 0xFF\n"
+		// counter = 0
+		"clr __tmp_reg__\n"
+		"loopto_gray:\n"
+		// (4x) push zero into screen buffer,
+		// then increment buffer position
+		"st Z+, %[color]\n"
+		"com %[color]\n"
+		"st Z+, %[color]\n"
+		"com %[color]\n"
+		"st Z+, %[color]\n"
+		"com %[color]\n"
+		"st Z+, %[color]\n"
+		"com %[color]\n"
+		// increase counter
+		"inc __tmp_reg__\n"
+		// repeat for 256 loops
+		// (until counter rolls over back to 0)
+		"brne loopto_gray\n"
+		: [color] "+d" (c),
+		  "+z" (bPtr)
+		:
+		:
+		);	  
+		  
+	}else{
+	    arduboy.fillScreen( c );
+	}
+    }
+
+    pollButtons();
+
+    StateRef func;
+    if( state != prevState ){
 
 	queueSize = 0;
     
-    func = (StateRef) pgm_read_word( stateInit + uint8_t(state) );
-    if( func ) (*func)();
+	func = (StateRef) pgm_read_word( stateInit + uint8_t(state) );
+	if( func ) (*func)();
     
-    prevState = state;
+	prevState = state;
 
-  }
+    }
 
-  func = (StateRef) pgm_read_word( stateUpdate + uint8_t(state) );
-  if( func ) (*func)();
+    func = (StateRef) pgm_read_word( stateUpdate + uint8_t(state) );
+    if( func ) (*func)();
 
-  flushDrawQueue();
+    flushDrawQueue();
   
-  arduboy.display();
+    arduboy.display();
 	
 }
