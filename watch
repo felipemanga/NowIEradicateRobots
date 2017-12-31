@@ -1,0 +1,19 @@
+emupid=0
+
+inotifywait -rm -e CLOSE_WRITE ./* | while read file action; do
+  if [[ ${file} =~ .*\.(ino|cpp|h)$ ]]; then
+    echo "Changed source: '$file'"
+    sleep 1
+    arduino --board arduino:avr:leonardo --pref build.path=./build --verify NowIEradicateRobots.ino
+
+    success=$?
+
+    if [ $success -eq 0 ] && [ $emupid -eq 0 ]; then
+       xdg-open build/NowIEradicateRobots.ino.hex
+       emupid=1
+    
+    fi
+    
+  fi
+done
+
