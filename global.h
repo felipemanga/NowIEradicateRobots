@@ -96,3 +96,219 @@ inline int8_t SIN( int16_t x){
 inline int8_t COS( int16_t x ){
     return SIN(x+180);
 }
+
+
+struct Enemy : public Actor {
+
+    uint8_t hp;
+    uint8_t timeAlive;
+    void *data;
+    void (*ai)( Enemy * );
+    Actor &init(){
+	Actor::init();
+	hp = 0;
+	timeAlive = 0;
+	ai = NULL;
+	return *this;
+    }		       
+    
+};
+
+struct Pattern {
+    int8_t startX, startY;
+    uint8_t startAngle, angleDelta;
+    int8_t radiusX, radiusY,
+	radiusDelta;
+    int8_t deltaX, deltaY, tweenWeight;
+};
+
+void patternAI( Enemy *e ){
+    Pattern pattern;
+
+    if( e->tweenWeight )
+	return;
+
+    uint8_t time = e->timeAlive;
+    
+    pgm_read_struct( &pattern, (const uint8_t *) e->data );
+
+    int16_t x, y, a;
+    a = pattern.startAngle;
+    a += int16_t(pattern.angleDelta)*time;
+	       
+    x = COS(a) * (
+	int16_t(pattern.radiusX)*2 +
+	int16_t(pattern.radiusDelta)*time
+	);
+    x += (int16_t(pattern.deltaX)*time*16);
+    x >>= 8;
+    x += pattern.startX;
+
+    y = SIN(a) * (
+	int16_t(pattern.radiusY)*2 +
+	int16_t(pattern.radiusDelta)*time
+	);
+    y += (int16_t(pattern.deltaY)*time*16);
+    y >>= 8;
+    y += pattern.startY;
+    
+    if( pattern.tweenWeight && time > 1 ){
+	e->moveTo( x, y )
+	    .setTweenWeight( pattern.tweenWeight );
+    }else{
+	e->setPosition( x, y );
+    }
+
+}
+
+typedef bool (*SpawnCallback)(
+    Enemy &,
+    uint8_t enemyId,
+    uint8_t waveId
+    );
+
+struct Wave {
+    uint8_t enemySpawnDelay, defaultEnemySpawnDelay;
+    uint8_t enemySpawnCount, defaultEnemySpawnCount;
+    uint8_t waveDelay, defaultWaveDelay, id;
+    SpawnCallback onSpawn;
+    void update( Enemy *enemies, uint8_t maxEnemies );
+    void init(
+	uint8_t waveDelay,
+	uint8_t spawnDelay,
+	uint8_t spawnCount,
+	SpawnCallback onSpawn
+    );
+};
+
+void Wave::init(
+    uint8_t waveDelay,
+    uint8_t spawnDelay,
+    uint8_t spawnCount,
+    SpawnCallback onSpawn
+    ){
+    id = 0xFF;
+    this->waveDelay = defaultWaveDelay = waveDelay;
+    enemySpawnDelay = 0; defaultEnemySpawnDelay = spawnDelay;
+    enemySpawnCount = 0; defaultEnemySpawnCount = spawnCount;
+    this->onSpawn = onSpawn;
+}
+    
+void Wave::update( Enemy *enemies, uint8_t maxEnemies ){
+    waveDelay -= arduboy.frameCount & 1;
+    if( waveDelay ){
+
+	if( !enemySpawnCount || enemySpawnDelay-- ) return;
+	
+	enemySpawnDelay = defaultEnemySpawnDelay;
+	
+	for( uint8_t i=0; i<maxEnemies; ++i ){
+	    auto &enemy = enemies[i];
+	    if( enemy.timeAlive ) continue;
+	    
+	    enemySpawnCount--;
+	    if( !(*onSpawn)(
+		    enemy,
+		    defaultEnemySpawnCount-enemySpawnCount,
+		    id
+		    )
+		)
+		return;
+	    
+	    enemy.show();
+
+	    break;
+	       
+	}
+	
+    }else{
+	
+	id++;
+	waveDelay = 4*30;
+	enemySpawnCount = defaultEnemySpawnCount;
+	enemySpawnDelay = 0;
+	
+    }	   
+	   
+}
+
+void updateEnemies( Enemy *enemies, uint8_t maxEnemies ){
+    
+    for( uint8_t i=0; i<maxEnemies; ++i ){
+	auto &enemy = enemies[i];
+	if( enemy.timeAlive ){
+	    (*enemy.ai)( &enemy );
+	    enemy.timeAlive++;
+	    if( !enemy.hp )
+		enemy.timeAlive = 0;
+	    if( !enemy.timeAlive )
+		enemy.hide();
+	}
+    }
+
+}
+
+uint8_t tune( uint16_t t ){
+    return (t>>7|t|t>>6)*10+(t&t>>13|t>>6)*4;
+}
+
+
+/*
+  startX startY
+  startAngle angleDelta
+  radiusX radiusY radiusDelta
+  deltaX, deltaY, tweenWeight;
+*/
+       
+const Pattern patterns[] PROGMEM = {
+    { // O Right 1
+	127,22,
+	127,1,
+	100,10,0,
+	0,0,0
+    },
+    { // O Left 2
+	0,22,
+	0,0xFF,
+	100,10,0,
+	0,0,0
+    },
+    { // Coil Top Left 3
+	0,0,
+	0,10,
+	5,5,0,
+	13,5,0
+    },
+    { // Coil Top Right 4
+	127,0,
+	0,10,
+	5,5,0,
+	-13,5,0
+    },
+    { // Mosquito Top Right 5
+	127, 16,
+	0,180,
+	0,15,0,
+	-15,0,2	       
+    },	   
+    { // Mosquito Mid Left 6
+	0, 32,
+	0,180,
+	0,15,0,
+	15,0,2	       
+    },	   
+    { // ZigZag Left 7
+	30,-15, 
+	0,5,
+	15,0,0,
+	0,10,
+	0 
+    },
+    { // ZigZag Right 8
+	128-30,-15, 
+	0,255-5,
+	15,0,0,
+	0,10,
+	0
+    }
+};

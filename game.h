@@ -51,6 +51,16 @@ template <> void memcpy_Pn <8> ( void *out, const uint8_t *src ){
     *uint32_tp(out) = pgm_read_dword(src);
     *(uint32_tp(out)+1) = pgm_read_dword(src+4);
 }
+template <> void memcpy_Pn <9> ( void *out, const uint8_t *src ){
+    *uint32_tp(out) = pgm_read_dword(src);
+    *(uint32_tp(out)+1) = pgm_read_dword(src+4);
+    *(uint8_tp(out)+8) = pgm_read_byte(src+8);
+}
+template <> void memcpy_Pn <10> ( void *out, const uint8_t *src ){
+    *uint32_tp(out) = pgm_read_dword(src);
+    *(uint32_tp(out)+1) = pgm_read_dword(src+4);
+    *(uint16_tp(out)+4) = pgm_read_word(src+8);
+}
 
 template <typename T> void pgm_read_struct( T *header, const void *src ){
     memcpy_Pn<sizeof(T)>( header, (const uint8_t *) src );
@@ -290,6 +300,7 @@ void flushDrawQueue(){
     
 }
 
+#include "global.h"
 
 #define STATE( NAME, VARS, INIT, UPDATE, ... )	\
     namespace ns ## NAME {			\
@@ -306,8 +317,6 @@ enum class State {
     MAX
 	} state, prevState = State::MAX;
 #undef STATE
-
-#include "global.h"
 
 static union {
 #define STATE( NAME, VAR, INIT, UPDATE, ... ) ns ## NAME :: Type_ ## NAME NAME;

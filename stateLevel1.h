@@ -11,111 +11,71 @@ STATE( Level1,
 			   
 	   } player;
 
-	   struct Enemy : public Actor {
+	   Enemy enemies[10];
 
-	       uint8_t hp;
-	       uint8_t timeAlive;
-	       uint8_t data;
-	       void (*ai)( Enemy * );
-	       Actor &init(){
-		   Actor::init();
-		   hp = 0;
-		   timeAlive = 0;
-		   ai = NULL;
-		   return *this;
-	       }		       
-		       
-	   } enemies[10];
-
-	   uint8_t enemySpawnDelay;
-	   uint8_t enemySpawnPattern;
-	   uint8_t waveDelay;
+	   Wave wave;
 		   
        },
        {
-	   scope.waveDelay = 100;
 	   scope.player.init();
+	   scope.wave.init(
+	       50,
+	       20,
+	       5,
+	       spawnEnemy
+	       );
 	   for( uint8_t i=0; i<10; ++i )
 	       scope.enemies[i].init();
        },
        {
 	   if( scope.player.inputEnabled )
 	       updatePlayer();
+
+	   scope.wave.update( scope.enemies, 10 );
+	   updateEnemies( scope.enemies, 10 );
 	   
-	   if( !scope.waveDelay-- )
-	       wave();
-	   
-	   for( uint8_t i=0; i<10; ++i ){
-	       auto &enemy = scope.enemies[i];
-	       if( enemy.timeAlive ){
-		   (*enemy.ai)( &enemy );
-		   enemy.timeAlive++;
-		   if( !enemy.hp )
-		       enemy.timeAlive = 0;
-		   if( !enemy.timeAlive )
-		       enemy.hide();
-	       }
-	   }
        },
 
-       struct Pattern {
-	   int8_t startX, startY;
-	   int8_t startAngle, angleDelta, radius, radiusDelta;
-	   int8_t deltaX, deltaY;
-       } const patterns[] PROGMEM = {
-	   { 30,30, 0,20,0,10, 0,0 }
+       const uint8_t sequence[] PROGMEM = {
+	   5,
+	       6,
+	       7,
+	       8,
+	       5,
+	       6,
+	       1,
+	       2,
+	       0,
+	       0
        };
-
-       void patternAI( Scope::Enemy *e ){
-	   Pattern pattern;
-	   pgm_read_struct( &pattern, patterns /*+((t&(t>>3))&3)*sizeof(Pattern)*/ );
-	   if( e->timeAlive==1 ){
-	       e->data = 0;
-	       e->setPosition( pattern.startX, pattern.startY );
-	   }
-
-	   if( !e->tweenWeight ){
-	       int16_t x, y, a;
-	       a = pattern.startAngle;
-	       a += int16_t(pattern.angleDelta)*e->data;       
-	       x = COS(a) * (
-		   int16_t(pattern.radius) +
-		   int16_t(pattern.radiusDelta)*e->data
-		   ) + int16_t(pattern.deltaX)*e->data;
-	       x = (x>>7) + pattern.startX;
-	       y = SIN(a) * (
-		   int16_t(pattern.radius) +
-		   int16_t(pattern.radiusDelta)*e->data
-		   ) + int16_t(pattern.deltaY)*e->data;
-	       y = (y>>7) + pattern.startY;
-	       
-	       e->moveTo( x, y );
-	       e->data++;
-	   }
-
-       }
-
+              
        void invert();
-       
-       void wave(){
+              
+       bool spawnEnemy( Enemy &enemy, uint8_t eid, uint8_t wid ){
+	   if( !pgm_read_byte(sequence + wid + 1) )
+	       scope.wave.waveDelay = 200;
 	   
-	   scope.waveDelay = 3*60;
-	   uint8_t t = arduboy.frameCount;
+	   wid = pgm_read_byte(sequence + wid);
+	   if( wid )
+	       wid--;
+	   else if( scope.player.inputEnabled ){
+	       scope.player
+		   .moveTo( scope.player.xH, -40 )
+		   .setTweenWeight( 5 )
+		   .onTweenComplete([]{
+			   state = State::Init;
+		       });
+	       scope.player.inputEnabled = false;
+	       return false;
+	   }else return false;
 	   
-	   for( uint8_t i=0; i<10; ++i ){
-	       auto &enemy = scope.enemies[i];
-	       if( enemy.timeAlive ) continue;
-	       t++;
-	       invert();	       
-	       enemy.ai = patternAI;
-	       enemy.timeAlive = 1;
-	       enemy.setAnimation( &miniFlightUnit );
-	       enemy.hp = 100;
-	       enemy.show();
-	       return;
-	       
-	   }
+	   enemy.data = (void *) (patterns+wid);
+	   enemy.ai = patternAI;	   
+	   enemy.timeAlive = 1;
+	   enemy.setAnimation( &miniFlightUnit );
+	   enemy.hp = 100;
 	   
+	   return true;
        }
        
        void invert(){
