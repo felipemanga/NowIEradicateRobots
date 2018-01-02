@@ -8,7 +8,7 @@ STATE( Init,
        },
        {
 	   playChiptune([](uint16_t t){
-		   return t>>4|t>>5|t;
+		   return t>>5|t>>6|t>>1;
 	       });
 	   
 	   clearScreen = CLEAR_WHITE;
