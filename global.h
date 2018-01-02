@@ -1,3 +1,5 @@
+#include "music.h"
+
 #include "bmp/bg1.h"
 #include "bmp/walk1.h"
 #include "bmp/walk2.h"
@@ -430,11 +432,6 @@ void updateEnemies( Enemy *enemies, uint8_t maxEnemies ){
     }
 
 }
-
-uint8_t tune( uint16_t t ){
-    return (t>>7|t|t>>6)*10+(t&t>>13|t>>6)*4;
-}
-
 
 /*
   startX startY

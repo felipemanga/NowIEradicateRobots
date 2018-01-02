@@ -7,6 +7,10 @@ STATE( Init,
 
        },
        {
+	   playChiptune([](uint16_t t){
+		   return t>>4|t>>5|t;
+	       });
+	   
 	   clearScreen = CLEAR_WHITE;
 	   scope.steps = 0;
 	  

@@ -24,6 +24,12 @@ STATE( Level1,
 		   
        },
        {
+	   playChiptune([](uint16_t t){
+		   return t>>3|t>>6|t;
+//		   return (t*5&t>>7)|(t*3&t>>10);
+//		   return (t>>7|t|t>>6)*10+(t&t>>13|t>>6)*4;
+	       }, false);
+	   
 	   seed = 0xBEEF;
 	   seedSequence = 0;
 	   
