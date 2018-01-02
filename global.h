@@ -1,6 +1,3 @@
-#include "bmp/av1.h"
-#include "bmp/hair2.h"
-#include "bmp/base1.h"
 #include "bmp/bg1.h"
 #include "bmp/walk1.h"
 #include "bmp/walk2.h"
@@ -10,11 +7,14 @@
 #include "bmp/walk6.h"
 #include "bmp/walk7.h"
 #include "bmp/walk8.h"
+#include "bmp/tiles1.h"
 
 #include "bmp/flightunit.h"
 #include "bmp/flightunit2.h"
 #include "bmp/minifu1.h"
 #include "bmp/minifu2.h"
+#include "bmp/enfly1.h"
+#include "bmp/enfly2.h"
 
 
 struct {
@@ -43,19 +43,36 @@ struct {
 
 struct {
 	AnimHeader header;
-	AnimFrameWBXY f[2];
+	AnimFrameWXY f[2];
 } const miniFlightUnit PROGMEM = {
 	{
 		ANIM_WHITE |
-		ANIM_BLACK |
 		ANIM_PLAY |
 		ANIM_LOOP |
 		ANIM_OFFSET,
 		2, 2
 	},
 	{
-		{ minifu1_comp_a, minifu1_comp_w, -8, -4 },
-		{ minifu2_comp_a, minifu2_comp_w, -8, -4 }
+		{ minifu1_comp_a, -8, -4 },
+		{ minifu2_comp_a, -8, -4 }
+	}
+};
+
+struct {
+	AnimHeader header;
+	AnimFrameWXY f[2];
+} const enFly PROGMEM = {
+	{
+		ANIM_WHITE |
+		ANIM_PLAY |
+		ANIM_LOOP |
+		ANIM_INVERT |
+		ANIM_OFFSET,
+		2, 2
+	},
+	{
+		{ enfly1_comp_a, -8, -4 },
+		{ enfly2_comp_a, -8, -4 }
 	}
 };
 
@@ -97,11 +114,175 @@ inline int8_t COS( int16_t x ){
     return SIN(x+180);
 }
 
+uint16_t seed, seedSequence;
 
-struct Enemy : public Actor {
+uint16_t NOISE( uint8_t x, uint8_t y, uint8_t z ){
+    return ((SIN( (uint16_t(((y)+seed)/z)*13) + (uint16_t(((x)+seed)/z)*78) )*23789&0xFF)*z);
+}
+
+int8_t random(int8_t min, int8_t max){
+    return (SIN( (arduboy.frameCount*13+(seedSequence++)*79)*seed )*23789&0x3FF>>2 ) % (max-min) + min;
+}
+
+typedef uint8_t (*PointCB)( uint8_t x, uint8_t y );
+
+struct TileWindow {
+    void **tileset;
+    uint8_t matrix[81];
+    uint8_t x, y, size;
+    PointCB point;
+    
+    void init( void **tileset, uint8_t s, PointCB p ){
+	point = p;
+	size = s;
+	this->tileset = tileset;
+	for( uint8_t i=0; i<9*9; ++i )
+	    matrix[i] = 0xFF;
+    }
+    
+    void render( int16_t x, int16_t y ){
+	int8_t xH = int8_tp(&x)[1];
+	int8_t yH = int8_tp(&y)[1];
+	int8_t xL = int8_tp(&x)[0]>>4;
+	int8_t yL = int8_tp(&y)[0]>>4;
+	if( xL > 0 ){
+	    xH--;
+	    xL -= size;
+	}
+	if( yL > 0 ){
+	    yH--;
+	    yL -= size;
+	}
+	int8_t xd = this->x - xH;
+	int8_t yd = this->y - yH;
+	int8_t xs=0, xe=9, xi=1, ys=0, ye=9, yi=1;
+
+	this->x = xH;
+	this->y = yH;
+
+	if( xd < -8 || xd > 8 || yd < -8 || yd > 8 )
+	    xd = yd = 0;
+
+	if( xd < 0 ){
+	    xs = 8;
+	    xe = 0;
+	    xi = -1;
+	}
+	xe-=xd;
+
+	if( yd < 0 ){
+	    ys = 8;
+	    ye = 0;
+	    yi = -1;
+	}
+	ye-=yd;
+
+	if( xd || yd ){	    
+	    for( uint8_t ry=ys; ry!=ye; ry+=yi ){
+		for( uint8_t rx=xs; rx!=xe; rx+=xi ){
+		    matrix[ry*9+rx] = matrix[(ry+yd)*9+rx+xd];
+		}
+	    }
+	}
+
+	if( xd < 0 ){
+	    auto t = xs;
+	    xs = xe;
+	    xe = t;
+	}
+	if( yd < 0 ){
+	    auto t = ye;
+	    ye = ys;
+	    ys = ye;
+	}	    
+	
+	for( uint8_t ry=0; ry<9; ++ry ){
+	    uint8_t miss = ry < ys || ry >= ye;
+	    for( uint8_t rx=0; rx<9; ++rx ){
+		uint8_t i = ry*9+rx;
+		uint8_t &tile = matrix[i];
+		
+		if( miss || rx < xs || rx >= xe || tile == 0xFF )
+		    matrix[i] = point(xH+rx, ry-yH);
+
+		if( tile != 0xFF ){
+		    Sprites::drawOverwrite(
+			rx*size+xL,
+			ry*size+yL,
+			(const uint8_tp) pgm_read_word( tileset+tile ),
+			0
+			);
+		}		
+	    }
+	}	
+    }
+};
+
+struct ActorBBox;
+typedef void (*CollisionCB)(ActorBBox &other);
+
+struct ActorBBox : public Actor {
+    int8_t left, right;
+    int8_t top, bottom;
+    int8_t checkCount, checkStride;
+    ActorBBox *check;
+    CollisionCB onCollision;
+    
+    Actor &init(){
+	checkCount = 0;
+	return Actor::init();
+    }
+
+    template< typename T > void initCollision( T *target, uint8_t count, CollisionCB cb ){
+	check = (ActorBBox *) target;
+	checkStride = sizeof(target);
+	checkCount = count;
+	onCollision = cb;
+    }
+    
+    void checkCollision(){
+	for( uint8_t j=0; j<checkCount; ++j ){
+	    ActorBBox *target = (ActorBBox *)(uint8_tp(check)+j*checkStride);
+	    
+	}
+    }
+};
+
+struct Shot : public ActorBBox {
+    int8_t dx, dy, ttl;
+    Actor &init(){
+	ttl = 0;
+	return ActorBBox::init();
+    }
+};
+
+void updateShots( Shot *shots, uint8_t count ){
+    for( uint8_t i=0; i<count; ++i ){
+	Shot &shot = shots[i];
+	if( shot.ttl ){
+	    shot.ttl--;
+	    shot.x += shot.dx;
+	    shot.y += shot.dy;
+	}
+    }
+}
+
+Shot *allocShot( Shot *shots, uint8_t count ){
+    for( uint8_t i=0; i<count; ++i ){
+	Shot &shot = shots[i];
+	if( shot.ttl )
+	    return &shot;
+    }
+    return NULL;
+}
+
+#define MAX_SHOT_COUNT 15
+
+struct Enemy : public ActorBBox {
 
     uint8_t hp;
     uint8_t timeAlive;
+    uint8_t id;
     void *data;
     void (*ai)( Enemy * );
     Actor &init(){
@@ -113,6 +294,8 @@ struct Enemy : public Actor {
     }		       
     
 };
+
+#define MAX_ENEMY_COUNT 9
 
 struct Pattern {
     int8_t startX, startY;
@@ -269,21 +452,21 @@ const Pattern patterns[] PROGMEM = {
     },
     { // O Left 2
 	0,22,
-	0,0xFF,
+	205,0xFF,
 	100,10,0,
 	0,0,0
     },
     { // Coil Top Left 3
 	0,0,
-	0,10,
-	5,5,0,
-	13,5,0
+	0,5,
+	10,10,0,
+	17,5,0
     },
     { // Coil Top Right 4
 	127,0,
-	0,10,
-	5,5,0,
-	-13,5,0
+	0,5,
+	10,10,0,
+	-17,5,0
     },
     { // Mosquito Top Right 5
 	127, 16,
@@ -310,5 +493,36 @@ const Pattern patterns[] PROGMEM = {
 	15,0,0,
 	0,10,
 	0
+    },
+    { // O Top 9
+	64,-10,
+	0,1,
+	60,50,0,
+	0,0,0
+    },
+    { // O Top2 10
+	64,-10,
+	128,0xFF,
+	40,40,0,
+	0,0,0
+    },
+    { // O Bottom 11
+	64,64,
+	0,0xFF,
+	50,50,0,
+	0,0,0
+    },
+    { // ZigZag big 12
+	64,-15, 
+	0,1,
+	70,0,0,
+	0,3,2 
+    },
+    { // v-line 13
+	64,-15, 
+	0,0,
+	0,0,0,
+	0,15,0 
     }
+    
 };

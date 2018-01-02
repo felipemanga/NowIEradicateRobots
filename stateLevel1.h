@@ -1,6 +1,6 @@
 STATE( Level1,
        {
-	   struct Player : public Actor {
+	   struct Player : public ActorBBox {
 			   
 	       bool inputEnabled;
 	       int8_t accX;
@@ -11,12 +11,39 @@ STATE( Level1,
 			   
 	   } player;
 
-	   Enemy enemies[10];
+	   Enemy enemies[MAX_ENEMY_COUNT];
+
+	   Shot shots[MAX_SHOT_COUNT];
 
 	   Wave wave;
+
+	   TileWindow ground;
+
+	   uint16_t groundX;
+	   uint16_t groundY;
 		   
        },
        {
+	   seed = 0xBEEF;
+	   seedSequence = 0;
+	   
+	   scope.groundX = 0;
+	   scope.groundY = 0;
+	   
+	   scope.ground.init(
+	       (void**) tileset,
+	       16,
+	       [](uint8_t x, uint8_t y)->uint8_t{
+		   int16_t acc = 0;
+		   acc += NOISE( x, y, 3 );
+		   acc += NOISE( x, y, 2 );
+		   acc += NOISE( x, y, 1 );
+		   
+		   return 0; //acc>>4;
+	       });
+	   scope.ground.x = 0;
+	   scope.ground.y = 0;
+	   
 	   scope.player.init();
 	   scope.wave.init(
 	       50,
@@ -24,27 +51,50 @@ STATE( Level1,
 	       5,
 	       spawnEnemy
 	       );
-	   for( uint8_t i=0; i<10; ++i )
+	   for( uint8_t i=0; i<MAX_ENEMY_COUNT; ++i )
 	       scope.enemies[i].init();
        },
        {
 	   if( scope.player.inputEnabled )
 	       updatePlayer();
 
-	   scope.wave.update( scope.enemies, 10 );
-	   updateEnemies( scope.enemies, 10 );
+	   scope.ground.render( scope.groundX, scope.groundY+=8 );
+
+	   scope.wave.update( scope.enemies, MAX_ENEMY_COUNT );
+	   updateEnemies( scope.enemies, MAX_ENEMY_COUNT );
+	   updateShots( scope.shots, MAX_SHOT_COUNT );
 	   
        },
 
+       const void * const tileset[] PROGMEM = {
+	   tiles1
+       };
+
        const uint8_t sequence[] PROGMEM = {
+	   13,
 	   5,
 	       6,
 	       7,
 	       8,
+	       
 	       5,
 	       6,
 	       1,
 	       2,
+	       12,
+	       
+	       6,
+	       5,
+	       3,
+	       4,
+	       
+	       10,
+	       9,
+	       2,
+	       1,
+	       8,
+	       12,
+	       
 	       0,
 	       0
        };
@@ -72,7 +122,7 @@ STATE( Level1,
 	   enemy.data = (void *) (patterns+wid);
 	   enemy.ai = patternAI;	   
 	   enemy.timeAlive = 1;
-	   enemy.setAnimation( &miniFlightUnit );
+	   enemy.setAnimation( &enFly );
 	   enemy.hp = 100;
 	   
 	   return true;
@@ -143,11 +193,11 @@ STATE( Level1,
 	   else
 	       player.accY = 0;
 		   
-	   player.speedY += player.accY * 20;
-	   if( player.speedY > 500 )
-	       player.speedY = 500;
-	   if( player.speedY < -500 )
-	       player.speedY = -500;
+	   player.speedY += player.accY * 30;
+	   if( player.speedY > 700 )
+	       player.speedY = 700;
+	   if( player.speedY < -700 )
+	       player.speedY = -700;
 		   
 	   if(
 	       (scope.player.yH < 0 && player.speedY < 0) ||

@@ -17,6 +17,9 @@ uint8_t clearScreen;
 typedef uint8_t *uint8_tp;
 typedef uint16_t *uint16_tp;
 typedef uint32_t *uint32_tp;
+typedef int8_t *int8_tp;
+typedef int16_t *int16_tp;
+typedef int32_t *int32_tp;
 
 template <int S> void memcpy_Pn( void *out, const uint8_t *src ){
     memcpy_P( out, src, S );
