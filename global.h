@@ -21,13 +21,13 @@
 
 struct {
     AnimHeader header;
-    AnimFrameW f;
+    AnimFrameWB f;
 } const titleAnim PROGMEM = {
     {
 	ANIM_WHITE,
 	1, 0
     },
-    { title_comp_b }
+    { title_comp_a }
 };
 
 

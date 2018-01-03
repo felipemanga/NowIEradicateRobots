@@ -16,8 +16,9 @@ STATE( Init,
 
 	   scope.title
 	       .init()
-	       .setPosition( 0, -64 )
-	       .setAnimation( &titleAnim );
+	       .setPosition( 0, 64 )
+	       .setAnimation( &titleAnim )
+	       .flags |= ANIM_INVERT;
 	  
 	   scope.fu
 	       .init()
@@ -44,6 +45,7 @@ STATE( Init,
 	       .onAnimationComplete([]{
 		       scope.steps++;
 		       if( scope.steps >= 5 ){
+			   scope.steps = 6;
 			   scope.title
 			       .moveTo(0, 0)
 			       .setTweenWeight(2)
@@ -56,14 +58,13 @@ STATE( Init,
        },
        {
 	  
-	   if( justPressed(A_BUTTON) && scope.steps < 5 ){
-	       scope.steps = 5;
-	       start();
+	   if( justPressed(A_BUTTON) && scope.steps < 7 ){
+	       scope.steps = 7;
+	       scope.fu.show();
+	       scope.title.hide();
+	       scope.girl.hide();
 	   }
     
-       },
-       void start(){		   
-	   scope.fu.show();
-	   scope.girl.hide();		   
-       }	  
+       }
+       
     )
