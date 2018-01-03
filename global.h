@@ -131,7 +131,7 @@ inline int8_t COS( int16_t x ){
 uint16_t seed, seedSequence;
 
 uint16_t NOISE( uint8_t x, uint8_t y, uint8_t z ){
-    return ((SIN( (uint16_t(((y)+seed)/z)*13) + (uint16_t(((x)+seed)/z)*78) )*23789&0xFF)*z);
+    return ((SIN( (uint16_t(((y)+seed)/z)*13) + (uint16_t(((x)+seed)/z)*78) )*289&0xFF)*z);
 }
 
 int8_t random(int8_t min, int8_t max){
@@ -143,31 +143,35 @@ typedef uint8_t (*PointCB)( uint8_t x, uint8_t y );
 struct TileWindow {
     void **tileset;
     uint8_t matrix[81];
-    uint8_t x, y, size;
+    uint8_t x, y;
     PointCB point;
     
     void init( void **tileset, uint8_t s, PointCB p ){
 	point = p;
-	size = s;
 	this->tileset = tileset;
 	for( uint8_t i=0; i<9*9; ++i )
 	    matrix[i] = 0xFF;
+	x = y = 0;
     }
     
     void render( int16_t x, int16_t y ){
-	int8_t xH = int8_tp(&x)[1];
-	int8_t yH = int8_tp(&y)[1];
-	int8_t xL = int8_tp(&x)[0]>>4;
-	int8_t yL = int8_tp(&y)[0]>>4;
-	if( xL > 0 ){
+	const uint8_t size = 16;
+	
+	int8_t xL = x % size;
+	int8_t yL = y % size;
+	int8_t xH = x / size;
+	int8_t yH = y / size;
+
+	if( xL >= 0 ){
 	    xH--;
 	    xL -= size;
 	}
-	if( yL > 0 ){
+	if( yL >= 0 ){
 	    yH--;
 	    yL -= size;
 	}
-	int8_t xd = this->x - xH;
+
+	int8_t xd = xH - this->x;
 	int8_t yd = this->y - yH;
 	int8_t xs=0, xe=9, xi=1, ys=0, ye=9, yi=1;
 
@@ -191,6 +195,11 @@ struct TileWindow {
 	}
 	ye-=yd;
 
+	auto t = ye;
+	ye = ys;
+	ys = t;
+	yi=-yi;
+
 	if( xd || yd ){	    
 	    for( uint8_t ry=ys; ry!=ye; ry+=yi ){
 		for( uint8_t rx=xs; rx!=xe; rx+=xi ){
@@ -204,31 +213,37 @@ struct TileWindow {
 	    xs = xe;
 	    xe = t;
 	}
-	if( yd < 0 ){
+
+	{
 	    auto t = ye;
 	    ye = ys;
-	    ys = ye;
+	    ys = t;
 	}	    
 	
 	for( uint8_t ry=0; ry<9; ++ry ){
 	    uint8_t miss = ry < ys || ry >= ye;
+	    
 	    for( uint8_t rx=0; rx<9; ++rx ){
 		uint8_t i = ry*9+rx;
-		uint8_t &tile = matrix[i];
+		uint8_t tile = matrix[i];
 		
 		if( miss || rx < xs || rx >= xe || tile == 0xFF )
-		    matrix[i] = point(xH+rx, ry-yH);
+		    tile = matrix[i] = point(rx-xH, ry-yH);
+		// else tile = 0xFF;
 
 		if( tile != 0xFF ){
-		    Sprites::drawOverwrite(
+		    Sprites::drawBitmap(
 			rx*size+xL,
 			ry*size+yL,
 			(const uint8_tp) pgm_read_word( tileset+tile ),
-			0
+			NULL,
+			16,16,
+			2
 			);
-		}		
+		}
+		
 	    }
-	}	
+	}
     }
 };
 

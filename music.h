@@ -35,9 +35,6 @@ void playChiptune( TuneGen tg, bool resetTime=true ){
 	TCCR4A = 0b00000000;
 	TCCR4B = 0b00000011;    // 62500Hz / 4
 	OCR4C  = 0xFF;          // Resolution to 8-bit (TOP=0xFF)
-	OCR4A  = 0x80;
-	OCR4A = 127;
-
 	//Init timer
 	TIMSK4 = 0b00000100;
 	bitsLeft = 0;
@@ -52,7 +49,7 @@ void playChiptune( TuneGen tg, bool resetTime=true ){
 //Timer
 ISR(TIMER4_OVF_vect){
 
-    if( !tuneGen )//|| !Arduboy2Audio::enabled() )
+    if( !tuneGen || !Arduboy2Audio::enabled() )
 	return;
 
     if( !bitsLeft ){

@@ -38,12 +38,16 @@ STATE( Level1,
 	       (void**) tileset,
 	       16,
 	       [](uint8_t x, uint8_t y)->uint8_t{
-		   int16_t acc = 0;
-		   acc += NOISE( x, y, 3 );
+		   int16_t acc = 0;// 0x80;
+		   acc += NOISE( x, y, 4 );
 		   acc += NOISE( x, y, 2 );
 		   acc += NOISE( x, y, 1 );
-		   
-		   return 0; //acc>>4;
+
+		   acc >>= 4;
+
+		   if( acc > 80 ) return 50;
+		   if( acc > 50 ) return 10;
+		   return 0;
 	       });
 	   scope.ground.x = 0;
 	   scope.ground.y = 0;
@@ -62,7 +66,7 @@ STATE( Level1,
 	   if( scope.player.inputEnabled )
 	       updatePlayer();
 
-	   scope.ground.render( scope.groundX, scope.groundY+=8 );
+	   scope.ground.render( scope.groundX, scope.groundY++ );
 
 	   scope.wave.update( scope.enemies, MAX_ENEMY_COUNT );
 	   updateEnemies( scope.enemies, MAX_ENEMY_COUNT );

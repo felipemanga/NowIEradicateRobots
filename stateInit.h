@@ -64,6 +64,11 @@ STATE( Init,
 	       scope.title.hide();
 	       scope.girl.hide();
 	   }
+
+	   if( justPressed(B_BUTTON) ){
+	       Arduboy2Audio::toggle();
+	       Arduboy2Audio::saveOnOff();
+	   }	   
     
        }
        
