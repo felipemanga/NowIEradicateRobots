@@ -2,7 +2,7 @@ STATE( Init,
        {
 	   Actor girl;
 	   uint8_t steps;
-	
+	   Actor title;
 	   Actor fu;
 
        },
@@ -13,6 +13,11 @@ STATE( Init,
 	   
 	   clearScreen = CLEAR_WHITE;
 	   scope.steps = 0;
+
+	   scope.title
+	       .init()
+	       .setPosition( 0, -64 )
+	       .setAnimation( &titleAnim );
 	  
 	   scope.fu
 	       .init()
@@ -38,8 +43,13 @@ STATE( Init,
 	       .show()
 	       .onAnimationComplete([]{
 		       scope.steps++;
-		       if( scope.steps >= 5 )
-			   start();
+		       if( scope.steps >= 5 ){
+			   scope.title
+			       .moveTo(0, 0)
+			       .setTweenWeight(2)
+			       .show();
+			   scope.girl.hide();
+		       }
 		   })
 	       .flags = ANIM_PLAY | ANIM_GRAY;
 	  
@@ -56,4 +66,4 @@ STATE( Init,
 	   scope.fu.show();
 	   scope.girl.hide();		   
        }	  
-)
+    )

@@ -1,6 +1,7 @@
 #include "music.h"
 
-#include "bmp/bg1.h"
+#include "bmp/title.h"
+
 #include "bmp/walk1.h"
 #include "bmp/walk2.h"
 #include "bmp/walk3.h"
@@ -17,6 +18,17 @@
 #include "bmp/minifu2.h"
 #include "bmp/enfly1.h"
 #include "bmp/enfly2.h"
+
+struct {
+    AnimHeader header;
+    AnimFrameW f;
+} const titleAnim PROGMEM = {
+    {
+	ANIM_WHITE,
+	1, 0
+    },
+    { title_comp_b }
+};
 
 
 struct {
