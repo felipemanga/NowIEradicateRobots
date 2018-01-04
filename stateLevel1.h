@@ -21,12 +21,12 @@ STATE( Level1,
 
 	   uint16_t groundX;
 	   uint16_t groundY;
-		   
+
        },
        {
 	   playChiptune([](uint16_t t){
 		   return t>>3|t>>6|t;
-	       }, false);
+	       });
 	   
 	   seed = 0xBEEF;
 	   seedSequence = 0;
@@ -35,19 +35,26 @@ STATE( Level1,
 	   scope.groundY = 0;
 	   
 	   scope.ground.init(
-	       (void**) tileset,
-	       16,
+	       tiles,
 	       [](uint8_t x, uint8_t y)->uint8_t{
-		   int16_t acc = 0;// 0x80;
-		   acc += NOISE( x, y, 4 );
-		   acc += NOISE( x, y, 2 );
-		   acc += NOISE( x, y, 1 );
+		   uint8_t tileId = noise1( x, y, 80 );
 
-		   acc >>= 4;
+		   uint8_t n=0;
+		   if( tileId > 0 ){
+		       if( noise1(x-1,y,80) < tileId ) n |= 1;
+		       if( noise1(x+1,y,80) < tileId ) n |= 2;
+		       if( noise1(x,y-1,80) < tileId ) n |= 4;
+		       if( noise1(x,y+1,80) < tileId ) n |= 8;
+		   }else{
+		       if( noise1(x-1,y,80) != tileId ) n |= 1;
+		       if( noise1(x+1,y,80) != tileId ) n |= 2;
+		       if( noise1(x,y-1,80) != tileId ) n |= 4;
+		       if( noise1(x,y+1,80) != tileId ) n |= 8;
+		   }
 
-		   if( acc > 80 ) return 50;
-		   if( acc > 50 ) return 10;
-		   return 0;
+		   uint8_t h = (tileId*2+(n>>3))*8+(n&7);
+
+		   return h;
 	       });
 	   scope.ground.x = 0;
 	   scope.ground.y = 0;
@@ -66,17 +73,13 @@ STATE( Level1,
 	   if( scope.player.inputEnabled )
 	       updatePlayer();
 
-	   scope.ground.render( scope.groundX, scope.groundY++ );
+	   scope.ground.render( scope.groundX, scope.groundY+=2 );
 
 	   scope.wave.update( scope.enemies, MAX_ENEMY_COUNT );
 	   updateEnemies( scope.enemies, MAX_ENEMY_COUNT );
 	   updateShots( scope.shots, MAX_SHOT_COUNT );
 	   
        },
-
-       const void * const tileset[] PROGMEM = {
-	   tiles1
-       };
 
        const uint8_t sequence[] PROGMEM = {
 	   13,

@@ -10,7 +10,8 @@
 #include "bmp/walk6.h"
 #include "bmp/walk7.h"
 #include "bmp/walk8.h"
-#include "bmp/tiles1.h"
+
+#include "bmp/tiles.h"
 
 #include "bmp/flightunit.h"
 #include "bmp/flightunit2.h"
@@ -138,18 +139,45 @@ int8_t random(int8_t min, int8_t max){
     return (SIN( (arduboy.frameCount*13+(seedSequence++)*79)*seed )*23789&0x3FF>>2 ) % (max-min) + min;
 }
 
+uint8_t noise3( uint8_t x, uint8_t y, uint8_t a, uint8_t b ){
+    int16_t acc = 0;// 0x80;
+    acc += NOISE( x, y, 4 );
+    acc += NOISE( x, y, 2 );
+    acc += NOISE( x, y, 1 );
+
+    acc >>= 4;
+
+    if( acc > b ) return 2;
+    if( acc > a ) return 1;
+    return 0;
+    
+}
+
+uint8_t noise1( uint8_t x, uint8_t y, uint8_t a ){
+    int16_t acc = 0;// 0x80;
+    acc += NOISE( x, y, 4 );
+    acc += NOISE( x, y, 2 );
+    acc += NOISE( x, y, 1 );
+
+    acc >>= 4;
+
+    if( acc > a ) return 1;
+    return 0;
+    
+}
+
 typedef uint8_t (*PointCB)( uint8_t x, uint8_t y );
 
 struct TileWindow {
-    void **tileset;
+    const unsigned char *tileset;
     uint8_t matrix[81];
     uint8_t x, y;
     PointCB point;
     
-    void init( void **tileset, uint8_t s, PointCB p ){
+    void init( const unsigned char * tileset, PointCB p ){
 	point = p;
 	this->tileset = tileset;
-	for( uint8_t i=0; i<9*9; ++i )
+	for( uint8_t i=0; i<81; ++i )
 	    matrix[i] = 0xFF;
 	x = y = 0;
     }
@@ -235,7 +263,8 @@ struct TileWindow {
 		    Sprites::drawBitmap(
 			rx*size+xL,
 			ry*size+yL,
-			(const uint8_tp) pgm_read_word( tileset+tile ),
+			// (const uint8_tp) pgm_read_word( tileset+tile ),
+			tileset+tile*32,
 			NULL,
 			16,16,
 			2
