@@ -5,13 +5,27 @@ struct FlightModePlayer : public LiveActor {
     int8_t accY;
     int16_t speedX;
     int16_t speedY;
+    uint8_t shootTime;
 	       
     Actor &init();
 
     void update(){
 	LiveActor::update();
+	if( shootTime ) shootTime--;
 	if( !inputEnabled )
 	    return;
+
+	if( !shootTime && isPressed(A_BUTTON) ){
+	    shootTime = 10;
+	    Shot *shot = allocShot();
+	    if( shot ){
+		shot->init( *this, enemies, MAX_ENEMY_COUNT, sizeof(Enemy) );
+		shot->flags ^= ANIM_INVERT;
+		shot->dx = 0;
+		shot->dy = -4;
+		shot->ttl = 30;
+	    }
+	}
 	
 	if( isPressed(LEFT_BUTTON) )
 	    accX = -1;
@@ -24,7 +38,7 @@ struct FlightModePlayer : public LiveActor {
 	else
 	    accX = 0;
 		   
-	speedX += accX * 25;
+	speedX += accX * 50;
 	if( speedX > 500 )
 	    speedX = 500;
 	if( speedX < -500 )
@@ -46,7 +60,7 @@ struct FlightModePlayer : public LiveActor {
 	else
 	    accY = 0;
 		   
-	speedY += accY * 30;
+	speedY += accY * 50;
 	if( speedY > 700 )
 	    speedY = 700;
 	if( speedY < -700 )
@@ -77,6 +91,7 @@ Actor &FlightModePlayer::init(){
     speedY = 0;
     immune = 0;
     hp = 100;
+    shootTime = 0;
     return *this;
 }
 

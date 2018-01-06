@@ -104,11 +104,11 @@ struct {
 	ANIM_WHITE |
 	ANIM_INVERT |
 	ANIM_OFFSET,
-	2, 0,
+	1, 0,
 	8, 8
     },
     {
-	{ shot1_comp_a, -4, -4 },
+//	{ shot1_comp_a, -4, -4 },
 	{ shot2_comp_a, -4, -4 }
     }
 };
@@ -317,7 +317,7 @@ struct LiveActor : public Actor {
 	if( amt > hp )
 	    amt = hp;
 	hp -= amt;
-	immune = 10;
+	immune = 5;
 	flags |= ANIM_GRAY;
 	(*onDamage)( this );
     }
@@ -355,8 +355,64 @@ struct Shot : public Actor {
     }
 };
 
-void updateShots( Shot *shots, uint8_t count ){
-    for( uint8_t i=0; i<count; ++i ){
+#define MAX_SHOT_COUNT 15
+
+struct Enemy : public LiveActor {
+
+    uint8_t timeAlive;
+    uint8_t id;
+    void *data;
+    void (*ai)( Enemy * );
+    void (*shoot)( Enemy * );
+    
+    Actor &init(){
+	Actor::init();
+	hp = 0;
+	timeAlive = 0;
+	ai = NULL;
+	return *this;
+    }
+
+    void destroy(){
+	actorFlags |= ACTOR_HIDDEN;
+	timeAlive = 0;
+	hp = 0;
+    }
+
+    void update(){
+	LiveActor::update();
+	
+	(*ai)( this );
+	timeAlive++;
+	    
+	if( shoot && (timeAlive+id*167)%128==0 )
+	    (*shoot)( this );	    
+	if( !hp )
+	    timeAlive = 0;
+	if( !timeAlive )
+	    destroy();
+    }
+    
+};
+
+#define MAX_ENEMY_COUNT 9
+
+
+Enemy enemies[MAX_ENEMY_COUNT];
+Shot shots[MAX_SHOT_COUNT];
+Delayed<5> after;
+
+Shot *allocShot(){
+    for( uint8_t i=0; i<MAX_SHOT_COUNT; ++i ){
+	Shot &shot = shots[i];
+	if( !shot.ttl )
+	    return &shot;
+    }
+    return NULL;
+}
+
+void updateShots(){
+    for( uint8_t i=0; i<MAX_SHOT_COUNT; ++i ){
 	Shot &shot = shots[i];
 	if( shot.ttl ){
 	    
@@ -381,42 +437,6 @@ void updateShots( Shot *shots, uint8_t count ){
 	}
     }
 }
-
-Shot *allocShot( Shot *shots, uint8_t count ){
-    for( uint8_t i=0; i<count; ++i ){
-	Shot &shot = shots[i];
-	if( !shot.ttl )
-	    return &shot;
-    }
-    return NULL;
-}
-
-#define MAX_SHOT_COUNT 15
-
-struct Enemy : public LiveActor {
-
-    uint8_t timeAlive;
-    uint8_t id;
-    void *data;
-    void (*ai)( Enemy * );
-    void (*shoot)( Enemy * );
-    
-    Actor &init(){
-	Actor::init();
-	hp = 0;
-	timeAlive = 0;
-	ai = NULL;
-	return *this;
-    }		       
-
-    void destroy(){
-	actorFlags |= ACTOR_HIDDEN;
-	timeAlive = 0;
-	hp = 0;
-    }
-};
-
-#define MAX_ENEMY_COUNT 9
 
 struct Pattern {
     int8_t startX, startY;
@@ -467,7 +487,6 @@ void patternAI( Enemy *e ){
 
 typedef bool (*SpawnCallback)(
     Enemy &,
-    uint8_t enemyId,
     uint8_t waveId
     );
 
@@ -511,9 +530,9 @@ void Wave::update( Enemy *enemies, uint8_t maxEnemies ){
 	    if( enemy.timeAlive ) continue;
 	    enemySpawnCount--;
 	    enemy.init();
+	    enemy.id = defaultEnemySpawnCount-enemySpawnCount;
 	    if( !(*onSpawn)(
 		    enemy,
-		    defaultEnemySpawnCount-enemySpawnCount,
 		    id
 		    )
 		)
@@ -538,18 +557,9 @@ void updateEnemies( Enemy *enemies, uint8_t maxEnemies ){
     
     for( uint8_t i=0; i<maxEnemies; ++i ){
 	auto &enemy = enemies[i];
-	if( enemy.timeAlive ){
-	    (*enemy.ai)( &enemy );
-	    enemy.timeAlive++;
-	    
-	    if( enemy.shoot && (enemy.timeAlive+i*167)%128==0 )
-		(*enemy.shoot)( &enemy );
-	    
-	    if( !enemy.hp )
-		enemy.timeAlive = 0;
-	    if( !enemy.timeAlive )
-		enemy.destroy();
-	}
+	if( enemy.timeAlive )
+	    enemy.update();
+	
     }
 
 }
