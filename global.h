@@ -20,6 +20,9 @@
 #include "bmp/enfly1.h"
 #include "bmp/enfly2.h"
 
+#include "bmp/shot1.h"
+#include "bmp/shot2.h"
+
 struct {
     AnimHeader header;
     AnimFrameWB f;
@@ -65,7 +68,8 @@ struct {
 		ANIM_PLAY |
 		ANIM_LOOP |
 		ANIM_OFFSET,
-		2, 2
+		2, 2,
+		16, 16
 	},
 	{
 		{ minifu1_comp_a, -8, -4 },
@@ -83,12 +87,30 @@ struct {
 		ANIM_LOOP |
 		ANIM_INVERT |
 		ANIM_OFFSET,
-		2, 2
+		2, 2,
+		16, 16
 	},
 	{
 		{ enfly1_comp_a, -8, -4 },
 		{ enfly2_comp_a, -8, -4 }
 	}
+};
+
+struct {
+	AnimHeader header;
+	AnimFrameWXY f[2];
+} const shot PROGMEM = {
+    {
+	ANIM_WHITE |
+	ANIM_INVERT |
+	ANIM_OFFSET,
+	2, 0,
+	8, 8
+    },
+    {
+	{ shot1_comp_a, -4, -4 },
+	{ shot2_comp_a, -4, -4 }
+    }
 };
 
 struct {
@@ -171,7 +193,9 @@ typedef uint8_t (*PointCB)( uint8_t x, uint8_t y );
 struct TileWindow {
     const unsigned char *tileset;
     uint8_t matrix[81];
-    uint8_t x, y;
+    int16_t tx, ty;
+    int16_t x, y;
+    uint8_t speedX, speedY;
     PointCB point;
     
     void init( const unsigned char * tileset, PointCB p ){
@@ -179,11 +203,15 @@ struct TileWindow {
 	this->tileset = tileset;
 	for( uint8_t i=0; i<81; ++i )
 	    matrix[i] = 0xFF;
-	x = y = 0;
+	tx = ty = x = y = 0;
+	speedX = speedY = 0;
     }
-    
-    void render( int16_t x, int16_t y ){
+
+    void render( ){
 	const uint8_t size = 16;
+
+	int16_t x = this->x + speedX;
+	int16_t y = this->y + speedY;
 	
 	int8_t xL = x % size;
 	int8_t yL = y % size;
@@ -199,12 +227,14 @@ struct TileWindow {
 	    yL -= size;
 	}
 
-	int8_t xd = xH - this->x;
-	int8_t yd = this->y - yH;
+	int8_t xd = xH - this->tx;
+	int8_t yd = this->ty - yH;
 	int8_t xs=0, xe=9, xi=1, ys=0, ye=9, yi=1;
 
-	this->x = xH;
-	this->y = yH;
+	this->tx = xH;
+	this->ty = yH;
+	this->x = x;
+	this->y = y;
 
 	if( xd < -8 || xd > 8 || yd < -8 || yd > 8 )
 	    xd = yd = 0;
@@ -276,41 +306,52 @@ struct TileWindow {
     }
 };
 
-struct ActorBBox;
-typedef void (*CollisionCB)(ActorBBox &other);
-
-struct ActorBBox : public Actor {
-    int8_t left, right;
-    int8_t top, bottom;
-    int8_t checkCount, checkStride;
-    ActorBBox *check;
-    CollisionCB onCollision;
+struct LiveActor : public Actor {
+    uint8_t hp;
+    uint8_t immune;
     
-    Actor &init(){
-	checkCount = 0;
-	return Actor::init();
+    void (*onDamage)( LiveActor *actor );
+    
+    void damage( uint8_t amt ){
+	if( !amt || !hp || immune ) return;
+	if( amt > hp )
+	    amt = hp;
+	hp -= amt;
+	immune = 10;
+	flags |= ANIM_GRAY;
+	(*onDamage)( this );
     }
 
-    template< typename T > void initCollision( T *target, uint8_t count, CollisionCB cb ){
-	check = (ActorBBox *) target;
-	checkStride = sizeof(target);
-	checkCount = count;
-	onCollision = cb;
-    }
-    
-    void checkCollision(){
-	for( uint8_t j=0; j<checkCount; ++j ){
-	    ActorBBox *target = (ActorBBox *)(uint8_tp(check)+j*checkStride);
-	    
+    void update(){
+	if( immune ){
+	    immune--;
+	    if( !immune )
+		flags &= ~ANIM_GRAY;
 	}
     }
 };
 
-struct Shot : public ActorBBox {
+struct Shot : public Actor {
     int8_t dx, dy, ttl;
-    Actor &init(){
-	ttl = 0;
-	return ActorBBox::init();
+
+    Actor *search;
+    uint8_t searchCount;
+    uint8_t searchSize;
+    
+    Actor &init( Actor &shooter, Actor *search, uint8_t searchCount, uint8_t searchSize ){
+	ttl = 60;
+	this->search = search;
+	this->searchCount = searchCount;
+	this->searchSize = searchSize;
+	Actor::init()
+	    .setAnimation( &shot );
+	
+	x = shooter.x;
+	y = shooter.y;
+	flags |= ANIM_INVERT;
+	actorFlags &= ~ACTOR_HIDDEN;
+	
+	return *this;
     }
 };
 
@@ -318,9 +359,25 @@ void updateShots( Shot *shots, uint8_t count ){
     for( uint8_t i=0; i<count; ++i ){
 	Shot &shot = shots[i];
 	if( shot.ttl ){
+	    
+	    shot.xH += shot.dx;
+	    shot.yH += shot.dy;
+
 	    shot.ttl--;
-	    shot.x += shot.dx;
-	    shot.y += shot.dy;
+	    
+	    shot.checkCollision(
+		shot.search,
+		shot.searchSize,
+		shot.searchCount,
+		[]( Actor *target ){
+		    ((LiveActor *)target)->damage(20);
+		}
+		);
+	    
+	    if( !shot.ttl )
+		shot.actorFlags |= ACTOR_HIDDEN;
+
+
 	}
     }
 }
@@ -328,7 +385,7 @@ void updateShots( Shot *shots, uint8_t count ){
 Shot *allocShot( Shot *shots, uint8_t count ){
     for( uint8_t i=0; i<count; ++i ){
 	Shot &shot = shots[i];
-	if( shot.ttl )
+	if( !shot.ttl )
 	    return &shot;
     }
     return NULL;
@@ -336,13 +393,14 @@ Shot *allocShot( Shot *shots, uint8_t count ){
 
 #define MAX_SHOT_COUNT 15
 
-struct Enemy : public ActorBBox {
+struct Enemy : public LiveActor {
 
-    uint8_t hp;
     uint8_t timeAlive;
     uint8_t id;
     void *data;
     void (*ai)( Enemy * );
+    void (*shoot)( Enemy * );
+    
     Actor &init(){
 	Actor::init();
 	hp = 0;
@@ -350,7 +408,11 @@ struct Enemy : public ActorBBox {
 	ai = NULL;
 	return *this;
     }		       
-    
+
+    void destroy(){
+	actorFlags |= ACTOR_HIDDEN;
+	timeAlive = 0;
+    }
 };
 
 #define MAX_ENEMY_COUNT 9
@@ -446,8 +508,8 @@ void Wave::update( Enemy *enemies, uint8_t maxEnemies ){
 	for( uint8_t i=0; i<maxEnemies; ++i ){
 	    auto &enemy = enemies[i];
 	    if( enemy.timeAlive ) continue;
-	    
 	    enemySpawnCount--;
+	    enemy.init();
 	    if( !(*onSpawn)(
 		    enemy,
 		    defaultEnemySpawnCount-enemySpawnCount,
@@ -480,10 +542,13 @@ void updateEnemies( Enemy *enemies, uint8_t maxEnemies ){
 	if( enemy.timeAlive ){
 	    (*enemy.ai)( &enemy );
 	    enemy.timeAlive++;
+	    if( enemy.shoot && (enemy.timeAlive+i*167)%128==0 )
+		(*enemy.shoot)( &enemy );
+	    
 	    if( !enemy.hp )
 		enemy.timeAlive = 0;
 	    if( !enemy.timeAlive )
-		enemy.hide();
+		enemy.destroy();
 	}
     }
 
@@ -579,3 +644,5 @@ const Pattern patterns[] PROGMEM = {
     }
     
 };
+
+#include "flightMode.h"

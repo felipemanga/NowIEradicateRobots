@@ -24,24 +24,21 @@ uint16_t tuneTime;
   #define TONE_PIN_MASK _BV(TONE_PIN)
 #endif
 
-void playChiptune( TuneGen tg, bool resetTime=true ){
-    tuneGen = tg;
+void stopChiptune(){
+    TIMSK4 = 0;
+}
 
-    if( resetTime )
-	tuneTime = 0;
+void playChiptune( TuneGen tg ){
+    tuneGen = tg;
+    tuneTime = 0;
     
-    if( tg ){
-	bitSet(TONE_PIN_DDR, TONE_PIN);
-	TCCR4A = 0b00000000;
-	TCCR4B = 0b00000011;    // 62500Hz / 4
-	OCR4C  = 0xFF;          // Resolution to 8-bit (TOP=0xFF)
-	//Init timer
-	TIMSK4 = 0b00000100;
-	bitsLeft = 0;
-    }else{
-	TIMSK4 = 0;
-    }
-    
+    bitSet(TONE_PIN_DDR, TONE_PIN);
+    TCCR4A = 0b00000000;
+    TCCR4B = 0b00000100;
+    OCR4C  = 0xFF;
+    OCR4A  = 0x80;
+    TIMSK4 = 0b00000100;
+    bitsLeft = 0;    
 }
 
 

@@ -78,10 +78,14 @@ template <typename T> void pgm_read_struct( T *header, const void *src ){
 #define ANIM_INVERT 64
 #define ANIM_PLAY 128
 
+#define ACTOR_HIDDEN 1
+
 struct AnimHeader {
     uint8_t flags;
     uint8_t frameCount;
     uint8_t frameTime;
+    uint8_t width;
+    uint8_t height;
 };
 struct AnimFrameW {
     const uint8_t *white;
@@ -102,6 +106,7 @@ struct Actor;
 
 Actor *drawQueue[ 32 ];
 uint8_t queueSize;
+typedef void (*CollisionCB)(Actor *other);
 
 struct Actor {
     union{
@@ -118,9 +123,13 @@ struct Actor {
             int8_t yH;			
         };
     };
+    
+    int8_t left, right;
+    int8_t top, bottom;
+
     int8_t targetX, targetY, tweenWeight;
     Actor *parent;
-    uint8_t frame, currentFrameTime, flags;
+    uint8_t frame, currentFrameTime, flags, actorFlags;
     const void *animation;
     void (*_onAnimationComplete)();
     void (*_onTweenComplete)();
@@ -130,7 +139,7 @@ struct Actor {
 	_onAnimationComplete = NULL;
 	_onTweenComplete = NULL;
 	parent = NULL;
-	flags = 0;
+	flags = actorFlags = 0;
 	return *this;
     }
 
@@ -195,6 +204,35 @@ struct Actor {
 		
 	return *this;
     }
+
+    void checkCollision(
+	Actor *check,
+	uint8_t checkStride,
+	uint8_t count,
+	CollisionCB cb
+	){
+	for( uint8_t j=0; j<count; ++j ){
+	    Actor &target = *(Actor *)(((uint8_tp)check)+j*checkStride);
+	    
+	    if( !(target.left   >= right  ||
+		  target.right  <= left   ||
+		  target.top    >= bottom ||
+		  target.bottom <= top) ){
+		cb( &target );
+	    }
+		
+	}
+    }
+
+    template< typename T > void checkCollision(
+	T *target,
+	uint8_t count,
+	CollisionCB cb
+	){
+	Actor *check = (Actor *) target;
+	checkCollision( check, sizeof(T), count, cb );
+    }
+    
 };
 
 void flushDrawQueue(){
@@ -202,6 +240,9 @@ void flushDrawQueue(){
     for( uint8_t i=0; i<queueSize; ++i ){
 
         Actor &actor = *drawQueue[i];
+
+	if( actor.actorFlags & ACTOR_HIDDEN )
+	    continue;
 
 	if( actor.tweenWeight ){
 	    int16_t t;
@@ -288,6 +329,11 @@ void flushDrawQueue(){
 	    y += actor.parent->yH;
 	}
 
+	actor.left = x;
+	actor.right = x + header.width;
+	actor.top = y;
+	actor.bottom = y + header.height;
+	    
 	bool icolor = flags & ANIM_INVERT;
 	bool color = !icolor;
 	color ^= (flags & ANIM_GRAY) & (arduboy.frameCount&1);
@@ -296,8 +342,7 @@ void flushDrawQueue(){
             arduboy.drawCompressed( x, y, frame.white, color );
             
         if( frame.black )
-            arduboy.drawCompressed( x, y, frame.black, icolor );
-        
+            arduboy.drawCompressed( x, y, frame.black, icolor );        
     
     }
     
