@@ -10,11 +10,15 @@ STATE( Level1,
 
 	   TileWindow ground;
 
+	   Delayed<5> after;
+
        },
        {
 	   playChiptune([](uint16_t t){
 		   return t>>3|t>>6|t&0x7;
 	       });
+
+	   scope.after.init();
 	   
 	   seed = 0x1942;
 	   seedSequence = 0;
@@ -32,8 +36,11 @@ STATE( Level1,
 	   
 	   scope.wave.init( 50, 20, 5, spawnEnemy );
 	   
-	   for( uint8_t i=0; i<MAX_ENEMY_COUNT; ++i )
-	       scope.enemies[i].timeAlive = 0;
+	   for( uint8_t i=0; i<MAX_ENEMY_COUNT; ++i ){
+	       auto &enemy = scope.enemies[i];
+	       enemy.timeAlive = 0;
+	       enemy.show().actorFlags = ACTOR_HIDDEN;
+	   }
 	   
 	   for( uint8_t i=0; i<MAX_SHOT_COUNT; ++i ){
 	       Shot &shot = scope.shots[i];
@@ -44,9 +51,9 @@ STATE( Level1,
 	   
        },
        {
-	   if( !scope.player.immune )
+	   if( !scope.player.immune && scope.player.hp )
 	       checkCollisions();
-
+	   scope.after.update();
 	   scope.ground.render();
 	   scope.player.update();
 	   scope.wave.update( scope.enemies, MAX_ENEMY_COUNT );
@@ -104,12 +111,9 @@ STATE( Level1,
 	   FlightModePlayer *player = (FlightModePlayer *) actor;
 	   player->inputEnabled = false;
 	   actor->actorFlags |= ACTOR_HIDDEN;
-	   actor->setPosition(0,0)
-	       .moveTo(128, 0)
-	       .setTweenWeight(4)
-	       .onTweenComplete([]{
-		       state = State::Init;
-		   });
+	   scope.after.frames(60) = []{
+	       state = State::Init;
+	   };
        }
 
        void enemyDamage( LiveActor *actor ){

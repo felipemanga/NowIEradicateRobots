@@ -235,6 +235,46 @@ struct Actor {
     
 };
 
+typedef void (*DelayedCB)();
+
+template <uint8_t max>
+struct Delayed {
+    DelayedCB cbs[max];
+    uint8_t framesLeft[max];
+    
+    Delayed &init(){
+	for( uint8_t i=0; i<max; ++i )
+	    cbs[i] = NULL;
+	return *this;
+    }
+    
+    DelayedCB &frames( uint8_t c ){
+	for( uint8_t i=0; i<max; ++i ){
+	    if( !cbs[i] ){
+		framesLeft[i] = c;
+		return cbs[i];
+	    }
+	}
+	return cbs[0];
+    }
+    
+    void update(){
+	for( uint8_t i=0; i<max; ++i ){
+	    auto cb = cbs[i];
+	    auto &frames = framesLeft[i];
+	    if( cb ){
+		frames--;
+		if( frames ) continue;
+		cbs[i] = NULL;
+		cb();
+	    }
+	}
+    }
+    
+};
+
+
+
 void flushDrawQueue(){
     
     for( uint8_t i=0; i<queueSize; ++i ){
