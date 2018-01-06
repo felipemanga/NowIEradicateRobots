@@ -29,7 +29,7 @@ STATE( Init,
 	       .onTweenComplete([]{
 		       scope.fu
 			   .onTweenComplete([]{
-				   state = State::Level1;
+				   state = State::AdvMode;
 			       })
 			   .moveTo( 64, -32 )
 			   .setTweenWeight( 2 );

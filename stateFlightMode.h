@@ -1,10 +1,12 @@
-STATE( Level1,
+STATE( FlightMode,
        {
 	   FlightModePlayer player;
 	   Wave wave;
 	   TileWindow ground;
        },
        {
+	   clearScreen = 0;
+	   
 	   playChiptune([](uint16_t t){
 		   return t>>3|t>>6|t&0x7;
 	       });
@@ -97,11 +99,14 @@ STATE( Level1,
        };
 
        void playerDamage( LiveActor *actor ){
-	   actor->immune = 60;
-	   if( actor->hp ) return;
-	   FlightModePlayer *player = (FlightModePlayer *) actor;
-	   player->inputEnabled = false;
-	   actor->actorFlags |= ACTOR_HIDDEN;
+	   auto &player = scope.player;
+	   player.immune = 60;
+	   cameraShakeY = 10;
+	   cameraShakeX = 20;
+	   if( player.hp ) return;
+
+	   player.inputEnabled = false;
+	   player.actorFlags |= ACTOR_HIDDEN;
 	   after.frames(60) = []{
 	       state = State::Init;
 	   };
@@ -149,7 +154,7 @@ STATE( Level1,
 	   enemy.ai = patternAI;
 	   enemy.timeAlive = 1;
 	   enemy.setAnimation( &enFly ).setTweenWeight(0);
-	   enemy.hp = 100;
+	   enemy.hp = 30;
 	   enemy.shoot = enemyShoot;
 	   enemy.onDamage = enemyDamage;
 	   
