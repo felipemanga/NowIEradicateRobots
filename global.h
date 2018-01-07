@@ -249,14 +249,10 @@ struct TileWindow {
 	uint8_t xH = x >> 4;
 	uint8_t yH = y >> 4;
 
-	if( xL >= 0 ){
-	    xH--;
-	    xL -= size;
-	}
-	if( yL >= 0 ){
-	    yH--;
-	    yL -= size;
-	}
+	xH--;
+	xL -= size;
+	yH--;
+	yL -= size;
 
 	int8_t xd = this->tx - xH;
 	int8_t yd = this->ty - yH;
@@ -269,20 +265,20 @@ struct TileWindow {
 	if( xd || yd )
 	    shift( xd, yd );
 
-	for( uint8_t ry=0; ry<9; ++ry ){
-	    
+	for( uint8_t ry=0; ry<5; ++ry ){
+	    uint8_t ry9 = ry * 9;
+	    int8_t screenY = ry*size+yL+cameraOffsetY;
 	    for( uint8_t rx=0; rx<9; ++rx ){
-		uint8_t i = ry*9+rx;
+		uint8_t i = ry9+rx;
 		uint8_t tile = matrix[i];
 		
 		if( tile == 0xFF )
 		    tile = matrix[i] = point(rx-xH, ry-yH);
-		// else tile = 0xFF;
 
 		if( tile != 0xFF ){
 		    Sprites::drawBitmap(
 			rx*size+xL+cameraOffsetX,
-			ry*size+yL+cameraOffsetY,
+			screenY,
 			// (const uint8_tp) pgm_read_word( tileset+tile ),
 			tileset+tile*32,
 			NULL,
@@ -392,6 +388,16 @@ Enemy enemies[MAX_ENEMY_COUNT];
 Shot shots[MAX_SHOT_COUNT];
 Delayed<5> after;
 
+Enemy *allocEnemy(){
+    for( uint8_t i=0; i<MAX_ENEMY_COUNT; ++i ){
+	auto &enemy = enemies[i];
+	if( enemy.timeAlive ) continue;
+	enemy.init();	
+	return &enemy;
+    }
+    return NULL;
+}
+
 Shot *allocShot(){
     for( uint8_t i=0; i<MAX_SHOT_COUNT; ++i ){
 	Shot &shot = shots[i];
@@ -485,7 +491,7 @@ struct Wave {
     uint8_t enemySpawnCount, defaultEnemySpawnCount;
     uint8_t waveDelay, defaultWaveDelay, id;
     SpawnCallback onSpawn;
-    void update( Enemy *enemies, uint8_t maxEnemies );
+    void update();
     void init(
 	uint8_t waveDelay,
 	uint8_t spawnDelay,
@@ -507,29 +513,20 @@ void Wave::init(
     this->onSpawn = onSpawn;
 }
     
-void Wave::update( Enemy *enemies, uint8_t maxEnemies ){
+void Wave::update(){
     waveDelay -= arduboy.frameCount & 1;
     if( waveDelay ){
 
 	if( !enemySpawnCount || enemySpawnDelay-- ) return;
 	
 	enemySpawnDelay = defaultEnemySpawnDelay;
-	
-	for( uint8_t i=0; i<maxEnemies; ++i ){
-	    auto &enemy = enemies[i];
-	    if( enemy.timeAlive ) continue;
-	    enemySpawnCount--;
-	    enemy.init();
-	    enemy.id = defaultEnemySpawnCount-enemySpawnCount;
-	    if( !(*onSpawn)(
-		    enemy,
-		    id
-		    )
-		)
-		return;
-	    
-	    break;
-	       
+
+	auto enemy = allocEnemy();
+	enemySpawnCount--;
+
+	if( enemy ){
+	    enemy->id = defaultEnemySpawnCount-enemySpawnCount;
+	    (*onSpawn)( *enemy, id );
 	}
 	
     }else{
@@ -539,17 +536,16 @@ void Wave::update( Enemy *enemies, uint8_t maxEnemies ){
 	enemySpawnCount = defaultEnemySpawnCount;
 	enemySpawnDelay = 0;
 	
-    }	   
+    }
 	   
 }
 
-void updateEnemies( Enemy *enemies, uint8_t maxEnemies ){
+void updateEnemies( ){
     
-    for( uint8_t i=0; i<maxEnemies; ++i ){
+    for( uint8_t i=0; i<MAX_ENEMY_COUNT; ++i ){
 	auto &enemy = enemies[i];
 	if( enemy.timeAlive )
-	    enemy.update();
-	
+	    enemy.update();	
     }
 
 }

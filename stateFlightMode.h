@@ -8,7 +8,7 @@ STATE( FlightMode,
 	   clearScreen = 0;
 	   
 	   playChiptune([](uint16_t t){
-		   return t>>3|t>>6|t&0x7;
+		   return t>>3|t>>8|t;
 	       });
 
 	   after.init();
@@ -49,9 +49,9 @@ STATE( FlightMode,
 	   after.update();
 	   scope.ground.render();
 	   scope.player.update();
-	   scope.wave.update( enemies, MAX_ENEMY_COUNT );
-	   updateEnemies( enemies, MAX_ENEMY_COUNT );
-	   updateShots( );
+	   scope.wave.update();
+	   updateEnemies();
+	   updateShots();
 	   
        },
 
