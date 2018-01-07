@@ -17,9 +17,9 @@ STATE( AdvMode,
 	       scope.ground.speedY = 0;
 
 	   if( isPressed(RIGHT_BUTTON) )
-	       scope.ground.speedX = 1;
-	   else if( isPressed(LEFT_BUTTON) )
 	       scope.ground.speedX = -1;
+	   else if( isPressed(LEFT_BUTTON) )
+	       scope.ground.speedX = 1;
 	   else
 	       scope.ground.speedX = 0;
 	   

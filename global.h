@@ -181,16 +181,61 @@ struct TileWindow {
     uint8_t matrix[81];
     int16_t tx, ty;
     int16_t x, y;
-    uint8_t speedX, speedY;
+    int8_t speedX, speedY;
     PointCB point;
+
+    void clear(){
+	for( uint8_t i=0; i<81; ++i )
+	    matrix[i] = 0xFF;
+    }
     
     void init( const unsigned char * tileset, PointCB p ){
 	point = p;
 	this->tileset = tileset;
-	for( uint8_t i=0; i<81; ++i )
-	    matrix[i] = 0xFF;
 	tx = ty = x = y = 0;
 	speedX = speedY = 0;
+	clear();
+    }
+
+    void shift( int8_t x, int8_t y ){
+	if( x > 8 || y > 8 || x < -8 || y < -8 ){
+	    clear();
+	    return;
+	}
+
+	int8_t sy = 0, ey = 9, iy = 1, by = 9;
+	int8_t sx = 0, ex = 9, ix = 1, bx = 9;
+	if( y < 0 ){
+	    iy = -1;
+	    ey = -1;
+	    sy = 8;
+	    by = -1;
+	}
+	if( x < 0 ){
+	    ix = -1;
+	    ex = -1;
+	    sx = 8;
+	    bx = -1;
+	}
+	ey -= y;
+	ex -= x;
+
+	int8_t y9 = y*9;
+  
+	for( int8_t cy=sy; cy!=ey; cy += iy ){
+	    int8_t cy9 = cy * 9;
+	    for( int8_t cx=sx; cx!=ex; cx += ix )
+		matrix[cy9+cx] = matrix[cy9+y9+cx+x];
+	    for( int8_t cx=ex; cx!=bx; cx += ix )
+		matrix[cy9+cx] = 0xFF;
+	}
+	
+	for( int8_t cy=ey; cy!=by; cy += iy ){
+	    int8_t cy9 = cy * 9;
+	    for( int8_t cx=sx; cx!=bx; cx += ix )
+		matrix[cy9+cx] = 0xFF;
+	}
+	
     }
 
     void render( ){
@@ -199,10 +244,10 @@ struct TileWindow {
 	int16_t x = this->x + speedX;
 	int16_t y = this->y + speedY;
 	
-	int8_t xL = x % size;
-	int8_t yL = y % size;
-	int8_t xH = x / size;
-	int8_t yH = y / size;
+	int8_t xL = x & 0xF;
+	int8_t yL = y & 0xF;
+	uint8_t xH = x >> 4;
+	uint8_t yH = y >> 4;
 
 	if( xL >= 0 ){
 	    xH--;
@@ -213,65 +258,24 @@ struct TileWindow {
 	    yL -= size;
 	}
 
-	int8_t xd = xH - this->tx;
+	int8_t xd = this->tx - xH;
 	int8_t yd = this->ty - yH;
-	int8_t xs=0, xe=9, xi=1, ys=0, ye=9, yi=1;
-
+	
 	this->tx = xH;
 	this->ty = yH;
 	this->x = x;
 	this->y = y;
 
-	if( xd < -8 || xd > 8 || yd < -8 || yd > 8 )
-	    xd = yd = 0;
+	if( xd || yd )
+	    shift( xd, yd );
 
-	if( xd < 0 ){
-	    xs = 8;
-	    xe = 0;
-	    xi = -1;
-	}
-	xe-=xd;
-
-	if( yd < 0 ){
-	    ys = 8;
-	    ye = 0;
-	    yi = -1;
-	}
-	ye-=yd;
-
-	auto t = ye;
-	ye = ys;
-	ys = t;
-	yi=-yi;
-
-	if( xd || yd ){	    
-	    for( uint8_t ry=ys; ry!=ye; ry+=yi ){
-		for( uint8_t rx=xs; rx!=xe; rx+=xi ){
-		    matrix[ry*9+rx] = matrix[(ry+yd)*9+rx+xd];
-		}
-	    }
-	}
-
-	if( xd < 0 ){
-	    auto t = xs;
-	    xs = xe;
-	    xe = t;
-	}
-
-	{
-	    auto t = ye;
-	    ye = ys;
-	    ys = t;
-	}	    
-	
 	for( uint8_t ry=0; ry<9; ++ry ){
-	    uint8_t miss = ry < ys || ry >= ye;
 	    
 	    for( uint8_t rx=0; rx<9; ++rx ){
 		uint8_t i = ry*9+rx;
 		uint8_t tile = matrix[i];
 		
-		if( miss || rx < xs || rx >= xe || tile == 0xFF )
+		if( tile == 0xFF )
 		    tile = matrix[i] = point(rx-xH, ry-yH);
 		// else tile = 0xFF;
 
