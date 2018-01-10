@@ -10,6 +10,10 @@
 #include "bmp/walk6.h"
 #include "bmp/walk7.h"
 #include "bmp/walk8.h"
+#include "bmp/idle1.h"
+#include "bmp/idle2.h"
+#include "bmp/back1.h"
+#include "bmp/back2.h"
 
 #include "bmp/tiles.h"
 
@@ -110,6 +114,32 @@ struct {
     {
 //	{ shot1_comp_a, -4, -4 },
 	{ shot2_comp_a, -4, -4 }
+    }
+};
+
+struct {
+    AnimHeader header;
+    AnimFrameWBXY f[2];
+} const girlIdle PROGMEM = {
+    { ANIM_WHITE | ANIM_BLACK | ANIM_LOOP | ANIM_OFFSET, 2, 8 },
+    {
+	{ idle1_comp_w, idle1_comp_b, 0, 0 },
+	{ idle2_comp_w, idle2_comp_b, 0, 0 }
+    }
+};
+
+struct {
+    AnimHeader header;
+    AnimFrameWBXY f[6];
+} const girlBack PROGMEM = {
+    { ANIM_WHITE | ANIM_BLACK | ANIM_OFFSET | ANIM_OFFSET_FEEDBACK, 6, 4 },
+    {
+	{ back1_comp_w, back1_comp_b, 0, 11 },
+	{ back2_comp_w, back2_comp_b,-19, 1 },
+	{ back2_comp_w, back2_comp_b,-10, 0 },
+	{ back2_comp_w, back2_comp_b,-10, 0 },
+	{ back1_comp_w, back1_comp_b, 0, -1 },
+	{ idle2_comp_w, idle2_comp_b, 0,-11 }
     }
 };
 
@@ -236,6 +266,15 @@ struct TileWindow {
 		matrix[cy9+cx] = 0xFF;
 	}
 	
+    }
+
+    void tileToScreen( int16_t &x, int16_t &y ){
+	x -= this->tx + 1;
+	y -= this->ty + 1;
+	x <<= 4;
+	y <<= 4;
+	x += this->x & 0xF;
+	y += this->y & 0xF;
     }
 
     void render( ){
@@ -546,6 +585,27 @@ void updateEnemies( ){
 	auto &enemy = enemies[i];
 	if( enemy.timeAlive )
 	    enemy.update();	
+    }
+
+}
+
+void initEnemies(){
+    
+    for( uint8_t i=0; i<MAX_ENEMY_COUNT; ++i ){
+	auto &enemy = enemies[i];
+	enemy.timeAlive = 0;
+	enemy.show().actorFlags = ACTOR_HIDDEN;
+    }
+
+}
+
+void initShots(){
+    
+    for( uint8_t i=0; i<MAX_SHOT_COUNT; ++i ){
+	Shot &shot = shots[i];
+	shot.show();
+	shot.ttl = 0;
+	shot.actorFlags = ACTOR_HIDDEN;
     }
 
 }

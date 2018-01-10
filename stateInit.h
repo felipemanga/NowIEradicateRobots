@@ -29,7 +29,7 @@ STATE( Init,
 	       .onTweenComplete([]{
 		       scope.fu
 			   .onTweenComplete([]{
-				   state = State::AdvMode;
+				   state = State::FightMode;
 			       })
 			   .moveTo( 64, -32 )
 			   .setTweenWeight( 2 );

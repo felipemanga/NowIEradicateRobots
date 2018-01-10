@@ -97,6 +97,7 @@ template <typename T> void pgm_read_struct( T *header, const void *src ){
 #define ANIM_PLAY 128
 
 #define ACTOR_HIDDEN 1
+#define ACTOR_DBLSPEED 2
 
 struct AnimHeader {
     uint8_t flags;
@@ -199,7 +200,7 @@ struct Actor {
 
     Actor &setAnimation( const void *_animation ){
 	frame = 0;
-	currentFrameTime = 0;
+	currentFrameTime = 0xFF;
 	animation = _animation;
 	return *this;
     }
@@ -331,6 +332,10 @@ void flushDrawQueue(){
 
         if( flags & ANIM_PLAY ){
             actor.currentFrameTime++;
+	    
+	    if( actor.actorFlags & ACTOR_DBLSPEED )
+		actor.currentFrameTime++;
+		
             if( actor.currentFrameTime >= header.frameTime ){
                 actor.frame++;
                 actor.currentFrameTime = 0;
@@ -369,7 +374,7 @@ void flushDrawQueue(){
 		
 	if( flags & ANIM_OFFSET ){
 	    frame.x = pgm_read_word(addr++);
-	    frame.y = pgm_read_word(addr);
+	    frame.y = pgm_read_word(addr++);
 	}else frame.x = frame.y = 0;
 
         int8_t x;
@@ -473,6 +478,7 @@ void tick(){
 	    c = 0b10101010;
 	    if( arduboy.frameCount & 1 )
 		c = ~c;
+	    uint8_t ac = ~c;
 	    // local variable for screen buffer pointer,
 	    // which can be declared a read-write operand
 	    uint8_t* bPtr = arduboy.sBuffer;
@@ -487,19 +493,16 @@ void tick(){
 		// (4x) push zero into screen buffer,
 		// then increment buffer position
 		"st Z+, %[color]\n"
-		"com %[color]\n"
+		"st Z+, %[acolor]\n"
 		"st Z+, %[color]\n"
-		"com %[color]\n"
-		"st Z+, %[color]\n"
-		"com %[color]\n"
-		"st Z+, %[color]\n"
-		"com %[color]\n"
+		"st Z+, %[acolor]\n"
 		// increase counter
 		"inc __tmp_reg__\n"
 		// repeat for 256 loops
 		// (until counter rolls over back to 0)
 		"brne loopto_gray\n"
 		: [color] "+d" (c),
+		  [acolor] "+d" (ac),
 		  "+z" (bPtr)
 		:
 		:

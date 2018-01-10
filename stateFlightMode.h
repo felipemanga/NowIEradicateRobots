@@ -29,18 +29,9 @@ STATE( FlightMode,
 
 	   scope.wave.init( 50, 20, 5, spawnEnemy );
 
-	   for( uint8_t i=0; i<MAX_ENEMY_COUNT; ++i ){
-	       auto &enemy = enemies[i];
-	       enemy.timeAlive = 0;
-	       enemy.show().actorFlags = ACTOR_HIDDEN;
-	   }
+	   initEnemies();
 	   
-	   for( uint8_t i=0; i<MAX_SHOT_COUNT; ++i ){
-	       Shot &shot = shots[i];
-	       shot.show();
-	       shot.ttl = 0;
-	       shot.actorFlags = ACTOR_HIDDEN;
-	   }
+	   initShots();
 	   
        },
        {

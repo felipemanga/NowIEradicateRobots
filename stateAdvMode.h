@@ -15,7 +15,11 @@ STATE( AdvMode,
 		   return (t>>8)&~(t>>5|t>>6|t>>1);
 	       });
 
-
+	   initEnemies();
+	   initShots();
+	   
+	   after.init();
+	   
 	   scope.player
 	       .init()
 	       .setPosition(64,32)
@@ -45,38 +49,48 @@ STATE( AdvMode,
 
        },
        {
-	   if( scope.inputEnabled ){
-	       
-	       if( isPressed(UP_BUTTON) )
-		   scope.ground.speedY = 1;
-	       else if( isPressed(DOWN_BUTTON) )
-		   scope.ground.speedY = -1;
-	       else
-		   scope.ground.speedY = 0;
-
-	       if( isPressed(RIGHT_BUTTON) )
-		   scope.ground.speedX = -1;
-	       else if( isPressed(LEFT_BUTTON) )
-		   scope.ground.speedX = 1;
-	       else
-		   scope.ground.speedX = 0;
-	       
-	   }
-	   
+	   move();
 	   scope.ground.render();
-
-	   updateEnemies();
+	   // updateEnemies();
        },
 
-       void spawnAdvEnemy(){
+       void move(){
+	   if( !scope.inputEnabled )
+	       return;
+	       
+	   if( isPressed(UP_BUTTON) )
+	       scope.ground.speedY = 1;
+	   else if( isPressed(DOWN_BUTTON) )
+	       scope.ground.speedY = -1;
+	   else
+	       scope.ground.speedY = 0;
+
+	   if( isPressed(RIGHT_BUTTON) )
+	       scope.ground.speedX = -1;
+	   else if( isPressed(LEFT_BUTTON) )
+	       scope.ground.speedX = 1;
+	   else
+	       scope.ground.speedX = 0;
+	       
+       }
+
+       void spawnAdvEnemy( int8_t x, int8_t y ){
+
 	   auto enemyp = allocEnemy();
 	   if( !enemyp ) return;
-    
+	   
 	   auto enemy = *enemyp;
 	   enemy.data = &scope.player;
 	   enemy.ai = tileWalkerAI;
 	   enemy.timeAlive = 1;
-	   enemy.setAnimation( &enFly ).setTweenWeight(0);
+	   enemy.setAnimation( &enFly );
+	   enemy.setPosition( 10, 10 );
+	   enemy.flags |= ANIM_INVERT;
+	   /*
+	   scope.ground.tileToScreen( enemy.x, enemy.y );
+	   enemy.x <<= 8;
+	   enemy.y <<= 8;
+	   */
 	   enemy.hp = 30;
 
        }
@@ -90,8 +104,8 @@ STATE( AdvMode,
 	       if( noise3(x+1,y,50,80) < tileId ) n |= 2;
 	       if( noise3(x,y-1,50,80) < tileId ) n |= 4;
 	       if( noise3(x,y+1,50,80) < tileId ) n |= 8;
-	       if( !n && random(0, (int8_t) 100) < 5 )
-		   spawnAdvEnemy();
+	       // if( !n && random(0, (int8_t) 100) < 10 )
+		   spawnAdvEnemy( x, y );
 	   }else{
 	       if( noise3(x-1,y,50,80) != tileId ) n |= 1;
 	       if( noise3(x+1,y,50,80) != tileId ) n |= 2;

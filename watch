@@ -4,7 +4,8 @@ inotifywait -rm -e CLOSE_WRITE ./* | while read file action; do
   if [[ ${file} =~ .*\.(ino|cpp|h)$ ]]; then
     echo "Changed source: '$file'"
     sleep 1
-    arduino --board arduino:avr:leonardo --pref build.path=./build --verify NowIEradicateRobots.ino
+
+    ./b
 
     success=$?
 
