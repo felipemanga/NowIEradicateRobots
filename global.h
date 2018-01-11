@@ -123,8 +123,8 @@ struct {
 } const girlIdle PROGMEM = {
     { ANIM_WHITE | ANIM_BLACK | ANIM_LOOP | ANIM_OFFSET, 2, 8 },
     {
-	{ idle1_comp_w, idle1_comp_b, 0, 0 },
-	{ idle2_comp_w, idle2_comp_b, 0, 0 }
+	{ idle1_comp_w, idle1_comp_b, 3, -1 },
+	{ idle2_comp_w, idle2_comp_b, 3, -1 }
     }
 };
 
@@ -134,12 +134,22 @@ struct {
 } const girlBack PROGMEM = {
     { ANIM_WHITE | ANIM_BLACK | ANIM_OFFSET | ANIM_OFFSET_FEEDBACK, 6, 4 },
     {
-	{ back1_comp_w, back1_comp_b, 0, 11 },
+	{ back1_comp_w, back1_comp_b, 0, 12 },
 	{ back2_comp_w, back2_comp_b,-19, 1 },
 	{ back2_comp_w, back2_comp_b,-10, 0 },
 	{ back2_comp_w, back2_comp_b,-10, 0 },
 	{ back1_comp_w, back1_comp_b, 0, -1 },
-	{ idle2_comp_w, idle2_comp_b, 0,-11 }
+	{ idle2_comp_w, idle2_comp_b, 0,-12 }
+    }
+};
+
+struct {
+    AnimHeader header;
+    AnimFrameWBXY f[1];
+} const girlDuck PROGMEM = {
+    { ANIM_WHITE | ANIM_BLACK | ANIM_OFFSET, 1, 1 },
+    {
+	{ back1_comp_w, back1_comp_b, 0, 11 }
     }
 };
 
@@ -156,14 +166,14 @@ struct {
 	8 // each animation frame is N game frames
     },
     {
-        { walk1_comp_w, walk1_comp_b, 0,  1 },
-        { walk2_comp_w, walk2_comp_b, 3,  0 },
         { walk3_comp_w, walk3_comp_b, 4, -1 },
         { walk4_comp_w, walk4_comp_b, 9,  0 },
         { walk5_comp_w, walk5_comp_b, 0,  1 },
         { walk6_comp_w, walk6_comp_b, 3, -1 },
         { walk7_comp_w, walk7_comp_b, 4,  0 },
-        { walk8_comp_w, walk8_comp_b, 9,  0 }
+        { walk8_comp_w, walk8_comp_b, 9,  0 },
+        { walk1_comp_w, walk1_comp_b, 0,  1 },
+        { walk2_comp_w, walk2_comp_b, 3,  0 }	
     }
 };
 
@@ -700,6 +710,15 @@ const Pattern patterns[] PROGMEM = {
     }
     
 };
+
+State nextState;
+uint8_t transitionColor;
+void changeState( State ns, uint8_t tc ){
+    nextState = ns;
+    state = State::Transition;
+    clearScreen = CLEAR_NONE;
+    transitionColor = tc;
+}
 
 #include "flightMode.h"
 #include "advMode.h"

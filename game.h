@@ -13,6 +13,7 @@ uint8_t cameraShakeX, cameraShakeY;
 int8_t cameraOffsetX, cameraOffsetY;
 
 uint8_t clearScreen;
+#define CLEAR_NONE  0x00
 #define CLEAR_WHITE 0x81
 #define CLEAR_BLACK 0x80
 #define CLEAR_GRAY  0x82
@@ -419,6 +420,13 @@ void flushDrawQueue(){
     
 }
 
+enum class State {
+#define STATE( NAME, VAR, INIT, UPDATE, ... ) NAME,
+#include "states.h"
+    MAX
+	} state, prevState = State::MAX;
+#undef STATE
+
 #include "global.h"
 
 #define STATE( NAME, VARS, INIT, UPDATE, ... )	\
@@ -428,13 +436,6 @@ void flushDrawQueue(){
 	struct Type_ ## NAME VARS;		\
     }
 #include "states.h"
-#undef STATE
-
-enum class State {
-#define STATE( NAME, VAR, INIT, UPDATE, ... ) NAME,
-#include "states.h"
-    MAX
-	} state, prevState = State::MAX;
 #undef STATE
 
 static union {

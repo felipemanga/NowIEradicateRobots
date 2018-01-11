@@ -135,7 +135,7 @@ STATE( FlightMode,
 		   .moveTo( scope.player.xH, -40 )
 		   .setTweenWeight( 5 )
 		   .onTweenComplete([]{
-			   state = State::Init;
+			   changeState( State::AdvMode, 0 );
 		       });
 	       scope.player.inputEnabled = false;
 	       return false;

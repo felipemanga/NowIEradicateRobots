@@ -22,7 +22,7 @@ struct FlightModePlayer : public LiveActor {
 		shot->init( *this, enemies, MAX_ENEMY_COUNT, sizeof(Enemy) );
 		shot->flags ^= ANIM_INVERT;
 		shot->dx = 0;
-		shot->dy = -4;
+		shot->dy = -3;
 		shot->ttl = 30;
 	    }
 	}
@@ -37,16 +37,16 @@ struct FlightModePlayer : public LiveActor {
 	    accX = 1;
 	else
 	    accX = 0;
-		   
-	speedX += accX * 50;
-	if( speedX > 500 )
-	    speedX = 500;
-	if( speedX < -500 )
-	    speedX = -500;
-		   
+
+	speedX += accX * 100;
+	if( speedX > 700 )
+	    speedX = 700;
+	if( speedX < -700 )
+	    speedX = -700;
+
 	if( (xH < 0 && speedX < 0) || (speedX > 0 && (x+speedX<x)) )
 	    speedX = 0;
-		   
+
 	x += speedX;
 
 	if( isPressed(UP_BUTTON) )
@@ -60,7 +60,7 @@ struct FlightModePlayer : public LiveActor {
 	else
 	    accY = 0;
 		   
-	speedY += accY * 50;
+	speedY += accY * 100;
 	if( speedY > 700 )
 	    speedY = 700;
 	if( speedY < -700 )
