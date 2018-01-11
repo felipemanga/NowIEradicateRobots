@@ -5,7 +5,8 @@ Arduboy2Base arduboy;
 #include "game.h"
 
 void setup() {
-  arduboy.begin();
+  arduboy.boot();
+  arduboy.flashlight();
   arduboy.setFrameRate(60);
 }
 

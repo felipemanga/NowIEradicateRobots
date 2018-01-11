@@ -474,47 +474,39 @@ void tick(){
 	return;
 
     if( clearScreen ){
-	uint8_t c = clearScreen&1, ac;
-	if( clearScreen & 2 ){
+	uint8_t c, ac;
+	if( clearScreen == CLEAR_GRAY ){
 	    c = 0b10101010;
 	    if( arduboy.frameCount & 1 )
 		c = ~c;
 	    ac = ~c;
-	}else{
-	    c = ac = -c;
-	}
-	    // local variable for screen buffer pointer,
-	    // which can be declared a read-write operand
-	    uint8_t* bPtr = arduboy.sBuffer;
+	}else c = ac = -(clearScreen&1);
 
-	    asm volatile(
-		// if value is zero, skip assigning to 0xff
-		// "cpse %[color], __zero_reg__\n"
-		// "ldi %[color], 0xFF\n"
-		// counter = 0
-		"clr __tmp_reg__\n"
-		"loopto_gray:\n"
-		// (4x) push zero into screen buffer,
-		// then increment buffer position
-		"st Z+, %[color]\n"
-		"st Z+, %[acolor]\n"
-		"st Z+, %[color]\n"
-		"st Z+, %[acolor]\n"
-		// increase counter
-		"inc __tmp_reg__\n"
-		// repeat for 256 loops
-		// (until counter rolls over back to 0)
-		"brne loopto_gray\n"
-		: [color] "+d" (c),
-		  [acolor] "+d" (ac),
-		  "+z" (bPtr)
-		:
-		:
-		);	  
-		  
-	    //}else{
-	    //arduboy.fillScreen( c );
-	    //}
+	// local variable for screen buffer pointer,
+	// which can be declared a read-write operand
+	uint8_t* bPtr = arduboy.sBuffer;
+
+	asm volatile(
+	    "clr __tmp_reg__\n"
+	    "loopto_gray:\n"
+	    // (4x) push c/ac into screen buffer,
+	    // then increment buffer position
+	    "st Z+, %[color]\n"
+	    "st Z+, %[acolor]\n"
+	    "st Z+, %[color]\n"
+	    "st Z+, %[acolor]\n"
+	    // increase counter
+	    "inc __tmp_reg__\n"
+	    // repeat for 256 loops
+	    // (until counter rolls over back to 0)
+	    "brne loopto_gray\n"
+	    "main_cont:\n"
+	    : [color] "+d" (c),
+	      [acolor] "+d" (ac),
+	      "+z" (bPtr)
+	    :
+	    :
+	    );	  
     }
 
     pollButtons();
