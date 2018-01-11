@@ -1,3 +1,0 @@
-void tileWalkerAI( Enemy *e ){
-    
-}

@@ -51,7 +51,7 @@ STATE( AdvMode,
        {
 	   move();
 	   scope.ground.render();
-	   // updateEnemies();
+	   updateEnemies();
        },
 
        void move(){
@@ -74,23 +74,26 @@ STATE( AdvMode,
 	       
        }
 
+       void tileWalkerAI( Enemy *enemy ){
+	   enemy->x = enemy->dataA;
+	   enemy->y = enemy->dataB;
+	   scope.ground.tileToScreen( enemy->x, enemy->y );
+	   enemy->x <<= 8;
+	   enemy->y <<= 8;
+       }       
+
        void spawnAdvEnemy( int8_t x, int8_t y ){
 
-	   auto enemyp = allocEnemy();
+	   Enemy *enemyp = allocEnemy();
 	   if( !enemyp ) return;
 	   
-	   auto enemy = *enemyp;
-	   enemy.data = &scope.player;
+	   auto &enemy = *enemyp;
+	   enemy.dataA = x;
+	   enemy.dataB = y;
 	   enemy.ai = tileWalkerAI;
 	   enemy.timeAlive = 1;
 	   enemy.setAnimation( &enFly );
-	   enemy.setPosition( 10, 10 );
 	   enemy.flags |= ANIM_INVERT;
-	   /*
-	   scope.ground.tileToScreen( enemy.x, enemy.y );
-	   enemy.x <<= 8;
-	   enemy.y <<= 8;
-	   */
 	   enemy.hp = 30;
 
        }
@@ -98,19 +101,24 @@ STATE( AdvMode,
        uint8_t advModeGroundGen( uint8_t x, uint8_t y){
 	   uint8_t tileId = noise3( x, y, 50, 80 );
 	   uint8_t n=0;
+
+	   uint8_t l = noise3(x-1,y,50,80),
+	       r = noise3(x+1,y,50,80),
+	       u = noise3(x,y-1,50,80),
+	       d = noise3(x,y+1,50,80);
     
 	   if( tileId > 0 ){
-	       if( noise3(x-1,y,50,80) < tileId ) n |= 1;
-	       if( noise3(x+1,y,50,80) < tileId ) n |= 2;
-	       if( noise3(x,y-1,50,80) < tileId ) n |= 4;
-	       if( noise3(x,y+1,50,80) < tileId ) n |= 8;
-	       // if( !n && random(0, (int8_t) 100) < 10 )
+	       if( l < tileId ) n |= 1;
+	       if( r < tileId ) n |= 2;
+	       if( u < tileId ) n |= 4;
+	       if( d < tileId ) n |= 8;
+	       if( !n ) // && random(0, (int8_t) 100) < 10 )
 		   spawnAdvEnemy( x, y );
 	   }else{
-	       if( noise3(x-1,y,50,80) != tileId ) n |= 1;
-	       if( noise3(x+1,y,50,80) != tileId ) n |= 2;
-	       if( noise3(x,y-1,50,80) != tileId ) n |= 4;
-	       if( noise3(x,y+1,50,80) != tileId ) n |= 8;
+	       if( l != tileId ) n |= 1;
+	       if( r != tileId ) n |= 2;
+	       if( u != tileId ) n |= 4;
+	       if( d != tileId ) n |= 8;
 	   }
 
 	   uint8_t h = (tileId*2+(n>>3))*8+(n&7);

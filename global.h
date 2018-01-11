@@ -279,8 +279,8 @@ struct TileWindow {
     }
 
     void tileToScreen( int16_t &x, int16_t &y ){
-	x -= this->tx + 1;
-	y -= this->ty + 1;
+	x = x - this->tx;
+	y = y - this->ty;
 	x <<= 4;
 	y <<= 4;
 	x += this->x & 0xF;
@@ -396,7 +396,14 @@ struct Enemy : public LiveActor {
 
     uint8_t timeAlive;
     uint8_t id;
-    void *data;
+    union{
+	void *data;
+	uint16_t data16;
+	struct{
+	    uint8_t dataA;
+	    uint8_t dataB;
+	};
+    };
     void (*ai)( Enemy * );
     void (*shoot)( Enemy * );
     
@@ -438,13 +445,21 @@ Shot shots[MAX_SHOT_COUNT];
 Delayed<5> after;
 
 Enemy *allocEnemy(){
+    Enemy *enemy = NULL;
+    
     for( uint8_t i=0; i<MAX_ENEMY_COUNT; ++i ){
-	auto &enemy = enemies[i];
-	if( enemy.timeAlive ) continue;
-	enemy.init();	
-	return &enemy;
+        enemy = &enemies[i];
+	
+	if( enemy->timeAlive )
+	    enemy = NULL;
+	else{
+	    enemy->init();
+	    break;
+	}
+	
     }
-    return NULL;
+    
+    return enemy;
 }
 
 Shot *allocShot(){
