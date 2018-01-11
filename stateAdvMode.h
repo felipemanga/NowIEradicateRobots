@@ -52,6 +52,14 @@ STATE( AdvMode,
 	   move();
 	   scope.ground.render();
 	   updateEnemies();
+
+	   auto enemy = &scope.player;
+	   enemy->x = scope.ground.tx + 4;
+	   enemy->y = scope.ground.ty + 1;
+	   scope.ground.tileToScreen( enemy->x, enemy->y );
+	   enemy->x = (enemy->x+8) << 8;
+	   enemy->y = (enemy->y+8) << 8;
+	   
        },
 
        void move(){
@@ -78,8 +86,8 @@ STATE( AdvMode,
 	   enemy->x = enemy->dataA;
 	   enemy->y = enemy->dataB;
 	   scope.ground.tileToScreen( enemy->x, enemy->y );
-	   enemy->x <<= 8;
-	   enemy->y <<= 8;
+	   enemy->x = (enemy->x+8) << 8;
+	   enemy->y = (enemy->y+8) << 8;
        }       
 
        void spawnAdvEnemy( int8_t x, int8_t y ){
@@ -88,8 +96,8 @@ STATE( AdvMode,
 	   if( !enemyp ) return;
 	   
 	   auto &enemy = *enemyp;
-	   enemy.dataA = x;
-	   enemy.dataB = y;
+	   enemy.dataA = scope.ground.tx - x;
+	   enemy.dataB = scope.ground.ty - y;
 	   enemy.ai = tileWalkerAI;
 	   enemy.timeAlive = 1;
 	   enemy.setAnimation( &enFly );

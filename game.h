@@ -474,12 +474,15 @@ void tick(){
 	return;
 
     if( clearScreen ){
-	uint8_t c = clearScreen&1;
+	uint8_t c = clearScreen&1, ac;
 	if( clearScreen & 2 ){
 	    c = 0b10101010;
 	    if( arduboy.frameCount & 1 )
 		c = ~c;
-	    uint8_t ac = ~c;
+	    ac = ~c;
+	}else{
+	    c = ac = -c;
+	}
 	    // local variable for screen buffer pointer,
 	    // which can be declared a read-write operand
 	    uint8_t* bPtr = arduboy.sBuffer;
@@ -509,9 +512,9 @@ void tick(){
 		:
 		);	  
 		  
-	}else{
-	    arduboy.fillScreen( c );
-	}
+	    //}else{
+	    //arduboy.fillScreen( c );
+	    //}
     }
 
     pollButtons();
