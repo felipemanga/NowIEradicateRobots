@@ -295,16 +295,18 @@ struct TileWindow {
 	
 	int8_t xL = x & 0xF;
 	int8_t yL = y & 0xF;
-	uint8_t xH = x >> 4;
-	uint8_t yH = y >> 4;
+	uint8_t xH = -x >> 4;
+	uint8_t yH = -y >> 4;
 
-	xH--;
+	if( xL ) xH++;
 	xL -= size;
-	yH--;
+
+	if( yL ) yH++;
 	yL -= size;
 
-	int8_t xd = this->tx - xH;
-	int8_t yd = this->ty - yH;
+
+	int8_t xd = xH - this->tx;
+	int8_t yd = yH - this->ty;
 	
 	this->tx = xH;
 	this->ty = yH;
@@ -322,7 +324,7 @@ struct TileWindow {
 		uint8_t tile = matrix[i];
 		
 		if( tile == 0xFF )
-		    tile = matrix[i] = point(rx-xH, ry-yH);
+		    tile = matrix[i] = point(rx+xH, yH+ry);
 
 		if( tile != 0xFF ){
 		    Sprites::drawBitmap(
@@ -446,13 +448,18 @@ Delayed<5> after;
 
 Enemy *allocEnemy(){
     Enemy *enemy = NULL;
+    uint8_t oldestIndex = 0, oldestAge = enemies[0].timeAlive;
     
     for( uint8_t i=0; i<MAX_ENEMY_COUNT; ++i ){
         enemy = &enemies[i];
 	
-	if( enemy->timeAlive )
-	    enemy = NULL;
-	else{
+	if( enemy->timeAlive ){
+	    if( enemy->timeAlive > oldestAge ){
+		oldestAge = enemy->timeAlive;
+		oldestIndex = i;
+	    }
+	    enemy = &enemies[oldestIndex];
+	}else{
 	    enemy->init();
 	    break;
 	}

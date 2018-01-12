@@ -55,10 +55,10 @@ STATE( AdvMode,
 
 	   auto enemy = &scope.player;
 	   enemy->x = scope.ground.tx + 4;
-	   enemy->y = scope.ground.ty + 1;
+	   enemy->y = scope.ground.ty + 2;
 	   scope.ground.tileToScreen( enemy->x, enemy->y );
-	   enemy->x = (enemy->x+8) << 8;
-	   enemy->y = (enemy->y+8) << 8;
+	   enemy->x = (enemy->x-8) << 8;
+	   enemy->y = (enemy->y-8) << 8;
 	   
        },
 
@@ -86,8 +86,10 @@ STATE( AdvMode,
 	   enemy->x = enemy->dataA;
 	   enemy->y = enemy->dataB;
 	   scope.ground.tileToScreen( enemy->x, enemy->y );
-	   enemy->x = (enemy->x+8) << 8;
-	   enemy->y = (enemy->y+8) << 8;
+	   enemy->x = (enemy->x-8) << 8;
+	   enemy->y = (enemy->y-8) << 8;
+	   if( enemy->xH > -8 && enemy->yH > -8 && enemy->yH < 64 )
+	       enemy->timeAlive--;
        }       
 
        void spawnAdvEnemy( int8_t x, int8_t y ){
@@ -96,10 +98,10 @@ STATE( AdvMode,
 	   if( !enemyp ) return;
 	   
 	   auto &enemy = *enemyp;
-	   enemy.dataA = scope.ground.tx - x;
-	   enemy.dataB = scope.ground.ty - y;
+	   enemy.dataA = x;
+	   enemy.dataB = y;
 	   enemy.ai = tileWalkerAI;
-	   enemy.timeAlive = 1;
+	   enemy.timeAlive = 100;
 	   enemy.setAnimation( &enFly );
 	   enemy.flags |= ANIM_INVERT;
 	   enemy.hp = 30;
@@ -120,7 +122,7 @@ STATE( AdvMode,
 	       if( r < tileId ) n |= 2;
 	       if( u < tileId ) n |= 4;
 	       if( d < tileId ) n |= 8;
-	       if( !n ) // && random(0, (int8_t) 100) < 10 )
+	       if( !n && random(0, (int8_t) 100) < 10 )
 		   spawnAdvEnemy( x, y );
 	   }else{
 	       if( l != tileId ) n |= 1;
