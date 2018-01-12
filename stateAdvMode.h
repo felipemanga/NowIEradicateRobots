@@ -52,7 +52,16 @@ STATE( AdvMode,
 	   move();
 	   scope.ground.render();
 	   updateEnemies();
-
+	   
+	   scope.player.checkCollision(
+	       enemies,
+	       MAX_ENEMY_COUNT,
+	       []( Actor *a ){
+		   auto e = (Enemy *) a;
+		   if( e->timeAlive < 1 ) return;
+		   changeState( State::FightMode, 0 );
+	       });
+	   
 	   auto enemy = &scope.player;
 	   enemy->x = scope.ground.tx + 4;
 	   enemy->y = scope.ground.ty + 2;
