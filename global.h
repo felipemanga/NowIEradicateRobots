@@ -351,12 +351,15 @@ struct LiveActor : public Actor {
     
     void damage( uint8_t amt ){
 	if( !amt || !hp || immune ) return;
+	
 	if( amt > hp )
 	    amt = hp;
 	hp -= amt;
 	immune = 5;
 	flags |= ANIM_GRAY;
+	
 	(*onDamage)( this );
+	
     }
 
     void update(){
@@ -625,7 +628,7 @@ void initEnemies(){
     
     for( uint8_t i=0; i<MAX_ENEMY_COUNT; ++i ){
 	auto &enemy = enemies[i];
-	enemy.timeAlive = 0;
+	enemy.timeAlive = enemy.hp = 0;
 	enemy.show().actorFlags = ACTOR_HIDDEN;
     }
 

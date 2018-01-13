@@ -58,8 +58,8 @@ STATE( AdvMode,
 	       MAX_ENEMY_COUNT,
 	       []( Actor *a ){
 		   auto e = (Enemy *) a;
-		   if( e->timeAlive < 1 ) return;
-		   changeState( State::FightMode, 0 );
+		   if( e->timeAlive )
+		       changeState( State::FightMode, 0 );
 	       });
 	   
 	   auto enemy = &scope.player;
@@ -131,7 +131,7 @@ STATE( AdvMode,
 	       if( r < tileId ) n |= 2;
 	       if( u < tileId ) n |= 4;
 	       if( d < tileId ) n |= 8;
-	       if( !n && random(0, (int8_t) 100) < 10 )
+	       if( !n && scope.inputEnabled && random(0, (int8_t) 100) < 6 )
 		   spawnAdvEnemy( x, y );
 	   }else{
 	       if( l != tileId ) n |= 1;
