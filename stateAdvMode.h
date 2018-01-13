@@ -23,7 +23,7 @@ STATE( AdvMode,
 	   scope.player
 	       .init()
 	       .setPosition(64,32)
-	       .setAnimation(&enFly)
+	       .setAnimation(&miniGirlIdle)
 	       .show()
 	       .actorFlags = ACTOR_HIDDEN;
 	   

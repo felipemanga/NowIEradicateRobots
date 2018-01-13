@@ -35,7 +35,7 @@ STATE( Init,
 			   .moveTo( 64, -32 )
 			   .setTweenWeight( 2 );
 		   })
-	       .flags = ANIM_PLAY
+	       .actorFlags = ACTOR_PLAY
 	       ;
 	  	  		  
 	   scope.girl
@@ -45,7 +45,7 @@ STATE( Init,
 	       .show()
 	       .onAnimationComplete([]{
 		       scope.steps++;
-		       if( scope.steps >= 5 ){
+		       if( scope.steps >= 5 ){			   
 			   scope.steps = 6;
 			   scope.title
 			       .moveTo(0, 0)
@@ -54,10 +54,13 @@ STATE( Init,
 			   scope.girl.hide();
 		       }
 		   })
-	       .flags = ANIM_PLAY | ANIM_GRAY;
+	       .setFlags( ANIM_GRAY, ACTOR_PLAY );
 	  
        },
        {
+
+	   if( justPressed(UP_BUTTON) )
+	       scope.girl.actorFlags ^= ACTOR_MIRROR;
 	  
 	   if( justPressed(A_BUTTON) && scope.steps < 7 ){
 	       scope.steps = 7;

@@ -15,6 +15,11 @@
 #include "bmp/back1.h"
 #include "bmp/back2.h"
 
+#include "bmp/minigirl1.h"
+#include "bmp/minigirl2.h"
+#include "bmp/minigirl3.h"
+#include "bmp/minigirl4.h"
+
 #include "bmp/tiles.h"
 
 #include "bmp/flightunit.h"
@@ -69,7 +74,6 @@ struct {
 } const miniFlightUnit PROGMEM = {
     {
 	ANIM_WHITE |
-	ANIM_PLAY |
 	ANIM_LOOP |
 	ANIM_OFFSET,
 	2, 2,
@@ -87,7 +91,6 @@ struct {
 } const enFly PROGMEM = {
     {
 	ANIM_WHITE |
-	ANIM_PLAY |
 	ANIM_LOOP |
 	ANIM_INVERT |
 	ANIM_OFFSET,
@@ -115,6 +118,14 @@ struct {
 //	{ shot1_comp_a, -4, -4 },
 	{ shot2_comp_a, -4, -4 }
     }
+};
+
+struct {
+    AnimHeader header;
+    AnimFrameWB f;
+} const miniGirlIdle PROGMEM = {
+    { ANIM_WHITE | ANIM_BLACK | ANIM_GRAY, 1 },
+    { minigirl1_comp_a, minigirl1_comp_b }
 };
 
 struct {
@@ -155,25 +166,26 @@ struct {
 
 struct {
     AnimHeader header;
-    AnimFrameWBXY f[8];
+    AnimFrameWBXYWH f[8];
 } const girlWalk PROGMEM = {
     {
 	ANIM_WHITE |
 	ANIM_BLACK |
 	ANIM_OFFSET_FEEDBACK |
-	ANIM_LOOP,
+	ANIM_LOOP |
+	ANIM_BBOX,
 	8, // frame count
-	8 // each animation frame is N game frames
+	7 // each animation frame is N game frames
     },
     {
-        { walk3_comp_w, walk3_comp_b, 4, -1 },
-        { walk4_comp_w, walk4_comp_b, 9,  0 },
-        { walk5_comp_w, walk5_comp_b, 0,  1 },
-        { walk6_comp_w, walk6_comp_b, 3, -1 },
-        { walk7_comp_w, walk7_comp_b, 4,  0 },
-        { walk8_comp_w, walk8_comp_b, 9,  0 },
-        { walk1_comp_w, walk1_comp_b, 0,  1 },
-        { walk2_comp_w, walk2_comp_b, 3,  0 }	
+        { walk3_comp_w, walk3_comp_b, 4, -1, 2, 0 },
+        { walk4_comp_w, walk4_comp_b, 9,  0, 2, 0 },
+        { walk5_comp_w, walk5_comp_b, 0,  1,-6, 0 },
+        { walk6_comp_w, walk6_comp_b, 3, -1, 2, 0 },
+        { walk7_comp_w, walk7_comp_b, 4,  0, 2, 0 },
+        { walk8_comp_w, walk8_comp_b, 9,  0, 2, 0 },
+        { walk1_comp_w, walk1_comp_b, 0,  1,-6, 0 },
+        { walk2_comp_w, walk2_comp_b, 3,  0, 2, 0 }	
     }
 };
 

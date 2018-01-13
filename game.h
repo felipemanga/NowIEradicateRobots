@@ -95,10 +95,11 @@ template <typename T> void pgm_read_struct( T *header, const void *src ){
 #define ANIM_WHITE 16
 #define ANIM_BLACK 32
 #define ANIM_INVERT 64
-#define ANIM_PLAY 128
+#define ANIM_BBOX 128
 
 #define ACTOR_HIDDEN 1
-#define ACTOR_DBLSPEED 2
+#define ACTOR_MIRROR 2
+#define ACTOR_PLAY   4
 
 struct AnimHeader {
     uint8_t flags;
@@ -120,6 +121,10 @@ struct AnimFrameWB {
 struct AnimFrameWBXY {
     const uint8_t *white, *black;
     int8_t x, y;
+};
+struct AnimFrameWBXYWH {
+    const uint8_t *white, *black;
+    int8_t x, y, w, h;   
 };
 
 struct Actor;
@@ -175,6 +180,12 @@ struct Actor {
 
     Actor &setParent( Actor &parent ){
 	this->parent = &parent;
+	return *this;
+    }
+
+    Actor &setFlags( uint8_t anim, uint8_t actor ){
+	this->flags = anim;
+	this->actorFlags = actor;
 	return *this;
     }
 
@@ -306,9 +317,14 @@ void flushDrawQueue(){
 
         Actor &actor = *drawQueue[i];
 
-	if( actor.actorFlags & ACTOR_HIDDEN )
+	auto actorFlags = actor.actorFlags;
+
+	if( actorFlags & ACTOR_HIDDEN )
 	    continue;
 
+	bool mirror = actorFlags & ACTOR_MIRROR;
+	bool play   = actorFlags & ACTOR_PLAY;
+	
 	if( actor.tweenWeight ){
 	    int16_t t;
 	    *(uint8_tp(&t)) = 0;
@@ -331,11 +347,8 @@ void flushDrawQueue(){
         
         uint8_t flags = actor.flags | header.flags;
 
-        if( flags & ANIM_PLAY ){
+        if( play ){
             actor.currentFrameTime++;
-	    
-	    if( actor.actorFlags & ACTOR_DBLSPEED )
-		actor.currentFrameTime++;
 		
             if( actor.currentFrameTime >= header.frameTime ){
                 actor.frame++;
@@ -352,13 +365,15 @@ void flushDrawQueue(){
 	    }
         }
         
-        AnimFrameWBXY frame;
+        AnimFrameWBXYWH frame;
 	uint8_t sizeofframe = 0;
 	if( flags & ANIM_WHITE )
 	    sizeofframe += sizeof(void *);
 	if( flags & ANIM_BLACK )
 	    sizeofframe += sizeof(void *);
 	if( flags & ANIM_OFFSET )
+	    sizeofframe += 2;
+	if( flags & ANIM_BBOX )
 	    sizeofframe += 2;
 
 	uint8_t *addr = ((uint8_t *)actor.animation) + sizeof(header) + actor.frame*sizeofframe;
@@ -378,10 +393,20 @@ void flushDrawQueue(){
 	    frame.y = pgm_read_word(addr++);
 	}else frame.x = frame.y = 0;
 
+	if( flags & ANIM_BBOX ){
+	    header.width  = frame.w = pgm_read_word(addr++);
+	    header.height = frame.h = pgm_read_word(addr++);
+	}else{
+	    frame.w = frame.h = 0;		
+	}
+
         int8_t x;
         int8_t y;
 
-        if( (flags & (ANIM_OFFSET_FEEDBACK | ANIM_PLAY)) == (ANIM_OFFSET_FEEDBACK | ANIM_PLAY) ){
+	if( mirror )
+	    frame.x = frame.w-frame.x;
+
+        if( play && (flags & ANIM_OFFSET_FEEDBACK) == ANIM_OFFSET_FEEDBACK ){
             if( !actor.currentFrameTime ){
                 actor.xH += frame.x;
                 actor.yH += frame.y;
@@ -409,13 +434,13 @@ void flushDrawQueue(){
 	bool icolor = flags & ANIM_INVERT;
 	bool color = !icolor;
 	color ^= (flags & ANIM_GRAY) & (arduboy.frameCount&1);
-
+	
         if( frame.white )
-            arduboy.drawCompressed( x, y, frame.white, color );
+            arduboy.drawCompressed( x, y, frame.white, color, mirror );
             
         if( frame.black )
-            arduboy.drawCompressed( x, y, frame.black, icolor );        
-    
+            arduboy.drawCompressed( x, y, frame.black, icolor, mirror );
+
     }
     
 }

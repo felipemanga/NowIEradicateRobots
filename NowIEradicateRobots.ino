@@ -1,6 +1,6 @@
-#include <Arduboy2.h>
+#include "Arduboy2Ex.h"
 
-Arduboy2Base arduboy;
+Arduboy2Ext arduboy;
 
 #include "game.h"
 
