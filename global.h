@@ -19,6 +19,8 @@
 #include "bmp/minigirl2.h"
 #include "bmp/minigirl3.h"
 #include "bmp/minigirl4.h"
+#include "bmp/minigirl5.h"
+#include "bmp/minigirl6.h"
 
 #include "bmp/tiles.h"
 
@@ -151,6 +153,25 @@ struct {
     {
 	{ minigirl2_comp_a, minigirl2_comp_b, -8, -8, -16, 0 },
 	{ minigirl1_comp_a, minigirl1_comp_b, -8, -8, -16, 0 }
+    }
+};
+
+struct {
+    AnimHeader header;
+    AnimFrameWBXYWH f[2];
+} const miniGirlWalkN PROGMEM = {
+    {
+	ANIM_WHITE |
+	ANIM_BLACK |
+	ANIM_GRAY |
+	ANIM_OFFSET |
+	ANIM_LOOP |
+	ANIM_BBOX,
+	2, 10
+    },
+    {
+	{ minigirl5_comp_a, minigirl5_comp_b, -8, -8, -16, 0 },
+	{ minigirl6_comp_a, minigirl6_comp_b, -8, -8, -16, 0 }
     }
 };
 

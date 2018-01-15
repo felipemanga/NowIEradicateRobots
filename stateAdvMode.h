@@ -85,9 +85,8 @@ STATE( AdvMode,
 	   else
 	       scope.ground.speedY = 0;
 
-	   scope.player
-	       .onAnimationComplete(NULL)
-	       .animation = &miniGirlWalkE;
+	   scope.player.animation = &miniGirlWalkE;
+	   scope.player._onAnimationComplete = NULL;
 	   
 	   if( isPressed(RIGHT_BUTTON) ){
 	       scope.ground.speedX = -1;
@@ -97,16 +96,19 @@ STATE( AdvMode,
 	       scope.player.actorFlags |= ACTOR_MIRROR;
 	   }else{
 	       scope.ground.speedX = 0;
+	       scope.player._onAnimationComplete = []{
+		 scope.player.actorFlags ^= ACTOR_MIRROR;
+	       };
+	       
 	       if( !scope.ground.speedY ){
-		   scope.player
-		       .onAnimationComplete(NULL)
-		       .animation = &miniGirlIdle;
-		   scope.player.actorFlags &= ~ACTOR_MIRROR;
-	       }else{
-		   scope.player.onAnimationComplete([]{
-			   scope.player.actorFlags ^= ACTOR_MIRROR;
-		       }).animation = &miniGirlWalkS;
-	       }
+		 scope.player._onAnimationComplete = NULL;
+		 scope.player.animation = &miniGirlIdle;
+		 scope.player.actorFlags &= ~ACTOR_MIRROR;
+	       }else if( scope.ground.speedY > 0 )
+		 scope.player.animation = &miniGirlWalkN;
+	       else
+		 scope.player.animation = &miniGirlWalkS;
+	       
 	   }
 	       
        }
