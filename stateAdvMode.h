@@ -23,7 +23,7 @@ STATE( AdvMode,
 	   scope.player
 	       .init()
 	       .setPosition(64,32)
-	       .setAnimation(&miniGirlIdle)
+	       .setAnimation(&miniGirlWalkS)
 	       .show()
 	       .actorFlags = ACTOR_HIDDEN;
 	   
@@ -37,7 +37,7 @@ STATE( AdvMode,
 	       .onTweenComplete([]{
 		       scope.inputEnabled = true;
 		       cameraShakeY = 20;
-		       scope.player.actorFlags = 0;
+		       scope.player.actorFlags = ACTOR_PLAY;
 		       scope.fu
 			   .moveTo( 127, -32 )
 			   .setTweenWeight( 6 )
@@ -61,20 +61,23 @@ STATE( AdvMode,
 		   if( e->timeAlive )
 		       changeState( State::FightMode, 0 );
 	       });
-	   
+/*	   
 	   auto enemy = &scope.player;
 	   enemy->x = scope.ground.tx + 4;
 	   enemy->y = scope.ground.ty + 2;
 	   scope.ground.tileToScreen( enemy->x, enemy->y );
 	   enemy->x = (enemy->x-8) << 8;
 	   enemy->y = (enemy->y-8) << 8;
-	   
+*/	   
        },
 
        void move(){
-	   if( !scope.inputEnabled )
+	   if( !scope.inputEnabled || scope.ground.x & 0xF || scope.ground.y & 0xF )
 	       return;
-	       
+
+	   scope.ground.speedY = 0;
+	   scope.ground.speedX = 0;
+	   
 	   if( isPressed(UP_BUTTON) )
 	       scope.ground.speedY = 1;
 	   else if( isPressed(DOWN_BUTTON) )
@@ -82,12 +85,29 @@ STATE( AdvMode,
 	   else
 	       scope.ground.speedY = 0;
 
-	   if( isPressed(RIGHT_BUTTON) )
+	   scope.player
+	       .onAnimationComplete(NULL)
+	       .animation = &miniGirlWalkE;
+	   
+	   if( isPressed(RIGHT_BUTTON) ){
 	       scope.ground.speedX = -1;
-	   else if( isPressed(LEFT_BUTTON) )
+	       scope.player.actorFlags &= ~ACTOR_MIRROR;
+	   }else if( isPressed(LEFT_BUTTON) ){
 	       scope.ground.speedX = 1;
-	   else
+	       scope.player.actorFlags |= ACTOR_MIRROR;
+	   }else{
 	       scope.ground.speedX = 0;
+	       if( !scope.ground.speedY ){
+		   scope.player
+		       .onAnimationComplete(NULL)
+		       .animation = &miniGirlIdle;
+		   scope.player.actorFlags &= ~ACTOR_MIRROR;
+	       }else{
+		   scope.player.onAnimationComplete([]{
+			   scope.player.actorFlags ^= ACTOR_MIRROR;
+		       }).animation = &miniGirlWalkS;
+	       }
+	   }
 	       
        }
 
