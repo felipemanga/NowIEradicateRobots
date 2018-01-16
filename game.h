@@ -394,8 +394,8 @@ void flushDrawQueue(){
 	}else frame.x = frame.y = 0;
 
 	if( flags & ANIM_BBOX ){
-	    header.width  = frame.w = pgm_read_word(addr++);
-	    header.height = frame.h = pgm_read_word(addr++);
+	    frame.w = pgm_read_word(addr++);
+	    frame.h = pgm_read_word(addr++);
 	}else{
 	    frame.w = frame.h = 0;		
 	}

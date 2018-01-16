@@ -124,73 +124,66 @@ struct {
 
 struct {
     AnimHeader header;
-    AnimFrameWBXY f;
+    AnimFrameWB f;
 } const miniGirlIdle PROGMEM = {
     {
 	ANIM_WHITE |
 	ANIM_BLACK |
 	ANIM_GRAY |
-	ANIM_OFFSET |
 	ANIM_LOOP,
-	1, 10
+	1, 10, 16, 16
     },
-    { minigirl1_comp_a, minigirl1_comp_b, -8, -8 }
+    { minigirl1_comp_a, minigirl1_comp_b }
 };
 
 struct {
     AnimHeader header;
-    AnimFrameWBXYWH f[2];
+    AnimFrameWB f[2];
 } const miniGirlWalkS PROGMEM = {
     {
 	ANIM_WHITE |
 	ANIM_BLACK |
 	ANIM_GRAY |
-	ANIM_OFFSET |
-	ANIM_LOOP |
-	ANIM_BBOX,
-	2, 10
+	ANIM_LOOP,
+	2, 10, 16, 16
     },
     {
-	{ minigirl2_comp_a, minigirl2_comp_b, -8, -8, -16, 0 },
-	{ minigirl1_comp_a, minigirl1_comp_b, -8, -8, -16, 0 }
+      { minigirl2_comp_a, minigirl2_comp_b },
+      { minigirl1_comp_a, minigirl1_comp_b }
     }
 };
 
 struct {
     AnimHeader header;
-    AnimFrameWBXYWH f[2];
+    AnimFrameWB f[2];
 } const miniGirlWalkN PROGMEM = {
     {
 	ANIM_WHITE |
 	ANIM_BLACK |
 	ANIM_GRAY |
-	ANIM_OFFSET |
-	ANIM_LOOP |
-	ANIM_BBOX,
-	2, 10
+	ANIM_LOOP,
+	2, 10, 16, 16
     },
     {
-	{ minigirl5_comp_a, minigirl5_comp_b, -8, -8, -16, 0 },
-	{ minigirl6_comp_a, minigirl6_comp_b, -8, -8, -16, 0 }
+      { minigirl5_comp_a, minigirl5_comp_b },
+      { minigirl6_comp_a, minigirl6_comp_b }
     }
 };
 
 struct {
     AnimHeader header;
-    AnimFrameWBXYWH f[2];
+    AnimFrameWB f[2];
 } const miniGirlWalkE PROGMEM = {
     {
 	ANIM_WHITE |
 	ANIM_BLACK |
-	ANIM_GRAY |
-	ANIM_OFFSET |
-	ANIM_LOOP |
-	ANIM_BBOX,
-	2, 10
+	ANIM_GRAY  |
+	ANIM_LOOP,
+	2, 10, 16, 16
     },
     {
-	{ minigirl3_comp_a, minigirl3_comp_b, -8, -8, -16, 0 },
-	{ minigirl4_comp_a, minigirl4_comp_b, -8, -8, -16, 0 }
+      { minigirl3_comp_a, minigirl3_comp_b },
+      { minigirl4_comp_a, minigirl4_comp_b }
     }
 };
 
