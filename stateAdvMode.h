@@ -7,7 +7,7 @@ STATE( AdvMode,
        },
        {
 	 scope.inputEnabled = false;
-	 seed = 0xBEEF;
+	 seed = ~0xBEEF;
 	 seedSequence = 0;
 	 scope.ground.init( tiles, advModeGroundGen );
 	 scope.ground.x = scope.ground.y = 8;
@@ -154,9 +154,15 @@ STATE( AdvMode,
 	   if( r < tileId ) n |= 2;
 	   if( u < tileId ) n |= 4;
 	   if( d < tileId ) n |= 8;
-	   if( !n && scope.inputEnabled && random(0, (int8_t) 100) < 6 ){
-	     spawnAdvEnemy( x, y );
-	     return 32+16;
+	   if( !n ){
+	     seed ^= 0x42;
+	     n = noise1(x, y, 60);
+	     seed ^= 0x42;
+	     if( n ){
+	       return 32+16;
+	     }else if( scope.inputEnabled && random(0, (int8_t) 100) < 6 ){
+	       spawnAdvEnemy( x, y );
+	     }
 	   }
 	 }else{
 	   if( l != tileId ) n |= 1;
