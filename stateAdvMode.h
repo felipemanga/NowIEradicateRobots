@@ -62,6 +62,7 @@ STATE( AdvMode,
 				       if( e->timeAlive )
 					 changeState( State::FightMode, 0 );
 				     });
+	 // scope.ground.matrix[ 2 * 9 + 4 ] = 0;
 	 /*	   
 		   auto enemy = &scope.player;
 		   enemy->x = scope.ground.tx + 4;
@@ -110,6 +111,28 @@ STATE( AdvMode,
 	   else
 	     scope.player.animation = &miniGirlWalkS;
 	       
+	 }
+
+	 auto &speedX = scope.ground.speedX;
+	 auto &speedY = scope.ground.speedY;
+
+	 bool hit = scope.ground.matrix[
+					(2 - speedY) * 9 +
+					4 - speedX
+					] > 32;
+	 bool hitY = scope.ground.matrix[
+					 (2 - speedY) * 9 +
+					 4
+					 ] > 32;
+	 bool hitX = scope.ground.matrix[
+					 (2) * 9 +
+					 4 - speedX
+					 ] > 32;
+	 
+	 if( hit ){
+	   if( !hitY ) speedX = 0;
+	   else if( !hitX ) speedY = 0;
+	   else speedX = speedY = 0;
 	 }
 	       
        }
